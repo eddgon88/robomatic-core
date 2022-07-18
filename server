@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+
+./gradlew build -x test
+
+#export SPRING_CLOUD_CONFIG_URI=http://localhost:8888
+export DB_HOST=localhost
+export DB_PORT=5432
+export DB_USER=robomatic
+export DB_PWD=robomatic
+export RABBITMQ_ADMIN_HOST=localhost
+export RABBITMQ_ADMIN_PORT=5672
+export RABBITMQ_ADMIN_LOGIN=admin
+export RABBITMQ_ADMIN_PASSWORD=admin
+export SPRING_PROFILES_ACTIVE=local
+
+java -Duser.timezone=UTC -Dspring.profiles.active=local -jar build/libs/robomatic-core-0.0.1.jar
