@@ -5,7 +5,7 @@ import com.robomatic.core.v1.entities.TestEntity;
 import com.robomatic.core.v1.entities.TestExecutionEntity;
 import com.robomatic.core.v1.enums.StatusEnum;
 import com.robomatic.core.v1.models.TestExecutionModel;
-import com.robomatic.core.v1.utils.StringUtils;
+import com.robomatic.core.v1.utils.RobomaticStringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -29,12 +29,12 @@ public class TestExecutionMapper {
 
     public TestExecutionEntity createTestExecutionEntity(Integer testId) {
 
-        String testExecutionId = StringUtils.createRandomId(constantsDto.getTestExecutionPrefix());
+        String testExecutionId = RobomaticStringUtils.createRandomId(constantsDto.getTestExecutionPrefix());
 
         return TestExecutionEntity.builder()
                 .testExecutionId(testExecutionId)
                 .testId(testId)
-                .testResultsDir(StringUtils.join(constantsDto.getEvidenceFileDir(), testExecutionId))
+                .testResultsDir(RobomaticStringUtils.join(constantsDto.getEvidenceFileDir(), testExecutionId))
                 .status(StatusEnum.RUNNING.getCode())
                 .build();
 

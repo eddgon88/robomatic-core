@@ -7,7 +7,7 @@ import com.robomatic.core.v1.models.CreateTestRequestModel;
 import com.robomatic.core.v1.models.RecordModel;
 import com.robomatic.core.v1.models.TestModel;
 import com.robomatic.core.v1.models.UpdateTestRequestModel;
-import com.robomatic.core.v1.utils.StringUtils;
+import com.robomatic.core.v1.utils.RobomaticStringUtils;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -18,7 +18,7 @@ public class TestMapper {
     public TestEntity createTestEntity(CreateTestRequestModel createTestRequest) {
 
         return TestEntity.builder()
-                .testId(StringUtils.createRandomId(PREFIX))
+                .testId(RobomaticStringUtils.createRandomId(PREFIX))
                 .name(createTestRequest.getName())
                 .script(createTestRequest.getScript())
                 .threads(createTestRequest.getThreads())

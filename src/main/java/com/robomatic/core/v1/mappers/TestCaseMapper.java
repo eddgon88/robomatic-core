@@ -4,6 +4,7 @@ import com.robomatic.core.v1.dtos.ConstantsDto;
 import com.robomatic.core.v1.entities.TestCaseEntity;
 import com.robomatic.core.v1.entities.TestEntity;
 import com.robomatic.core.v1.enums.TestCaseEnum;
+import com.robomatic.core.v1.utils.RobomaticStringUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -20,7 +21,7 @@ public class TestCaseMapper {
                 .testId(test.getId())
                 .typeId(testCaseEnum.getCode())
                 .fileDir(StringUtils.join(constantsDto.getEvidenceFileDir(),
-                        com.robomatic.core.v1.utils.StringUtils.createRandomId(constantsDto.getTestCasePrefix()),
+                        RobomaticStringUtils.createRandomId(constantsDto.getTestCasePrefix()),
                         constantsDto.getTestCaseTerminal()))
                 .build();
 
