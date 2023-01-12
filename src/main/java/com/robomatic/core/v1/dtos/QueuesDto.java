@@ -14,6 +14,7 @@ public class QueuesDto {
     private String sendToExecute;
     private String insertCaseExecution;
     private String updateTestExecution;
+    private String stopTestExecution;
     private String parkingLot;
 
 }

@@ -6,6 +6,7 @@ import com.robomatic.core.v1.models.UpdateTestRequestModel;
 import com.robomatic.core.v1.services.CreateTestService;
 import com.robomatic.core.v1.services.ExecuteTestService;
 import com.robomatic.core.v1.services.GetTestService;
+import com.robomatic.core.v1.services.StopTestExecutionService;
 import com.robomatic.core.v1.services.UpdateTestService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,6 +41,9 @@ public class TestController {
     private UpdateTestService updateTestService;
 
     @Autowired
+    private StopTestExecutionService stopTestExecutionService;
+
+    @Autowired
     private FunctionCaller functionCaller;
 
     @PostMapping(path = "/create", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
@@ -64,6 +68,12 @@ public class TestController {
     public ResponseEntity<Object> getTestList(@PathVariable("userId") Integer userId, @PathVariable("folderId") Integer folderId) {
         UnaryOperator<Object> function = req -> getTestService.getTests((Integer) req, folderId);
         return functionCaller.callFunction(userId, function, HttpStatus.OK);
+    }
+
+    @PostMapping(path = "/stop/{testId}", produces = APPLICATION_JSON_VALUE)
+    public ResponseEntity<Object> stopTestExecution(@PathVariable("testId") Integer testId) {
+        UnaryOperator<Object> function = req -> stopTestExecutionService.stopTestExecution((Integer) req);
+        return functionCaller.callFunction(testId, function, HttpStatus.OK);
     }
 
 }
