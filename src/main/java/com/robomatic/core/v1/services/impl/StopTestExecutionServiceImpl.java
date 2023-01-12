@@ -8,8 +8,12 @@ import com.robomatic.core.v1.exceptions.messages.NotFoundErrorCode;
 import com.robomatic.core.v1.jms.JmsSender;
 import com.robomatic.core.v1.repositories.TestExecutionRepository;
 import com.robomatic.core.v1.services.StopTestExecutionService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
+@Slf4j
+@Service
 public class StopTestExecutionServiceImpl implements StopTestExecutionService {
 
     @Autowired
@@ -23,13 +27,16 @@ public class StopTestExecutionServiceImpl implements StopTestExecutionService {
 
     @Override
     public TestExecutionEntity stopTestExecution(Integer testId) {
+        log.info("Stopping test: {}", testId);
         TestExecutionEntity testExecution = testExecutionRepository.findByTestIdAndRunningStatus(testId)
                 .orElseThrow(() -> new NotFoundException(NotFoundErrorCode.E404003));
+        log.info("Stopping test execution: {}", testExecution.getTestExecutionId());
 
         jmsSender.sendQueue(queuesDto.getSendToExecute(), testExecution);
 
         testExecution.setStatus(StatusEnum.STOPPED.getCode());
         testExecutionRepository.save(testExecution);
+        log.info("Test Execution stopped");
         return testExecution;
     }
 }
