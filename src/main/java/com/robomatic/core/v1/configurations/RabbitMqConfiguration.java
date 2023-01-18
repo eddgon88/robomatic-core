@@ -64,6 +64,11 @@ public class RabbitMqConfiguration {
     }
 
     @Bean
+    public Queue stopTestExecutionQueue() {
+        return new Queue(queuesDto.getStopTestExecution());
+    }
+
+    @Bean
     public Queue parkingLotQueue() {
         return new Queue(queuesDto.getParkingLot());
     }

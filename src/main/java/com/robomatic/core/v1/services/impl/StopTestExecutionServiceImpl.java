@@ -32,7 +32,7 @@ public class StopTestExecutionServiceImpl implements StopTestExecutionService {
                 .orElseThrow(() -> new NotFoundException(NotFoundErrorCode.E404003));
         log.info("Stopping test execution: {}", testExecution.getTestExecutionId());
 
-        jmsSender.sendQueue(queuesDto.getSendToExecute(), testExecution);
+        jmsSender.sendQueue(queuesDto.getStopTestExecution(), testExecution);
 
         testExecution.setStatus(StatusEnum.STOPPED.getCode());
         testExecutionRepository.save(testExecution);
