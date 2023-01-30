@@ -48,10 +48,10 @@ public class RabbitMqConfiguration {
         return new RabbitAdmin(connectionFactory);
     }
 
-    @Bean
-    public Queue sendToExecuteQueue() {
-        return new Queue(queuesDto.getSendToExecute());
-    }
+    //@Bean
+    //public Queue sendToExecuteQueue() {
+    //    return new Queue(queuesDto.getSendToExecute());
+    //}
 
     @Bean
     public Queue insertCaseExecutionQueue() {
@@ -63,10 +63,10 @@ public class RabbitMqConfiguration {
         return new Queue(queuesDto.getUpdateTestExecution());
     }
 
-    @Bean
-    public Queue stopTestExecutionQueue() {
-        return new Queue(queuesDto.getStopTestExecution());
-    }
+    //@Bean
+    //public Queue stopTestExecutionQueue() {
+    //    return new Queue(queuesDto.getStopTestExecution());
+    //}
 
     @Bean
     public Queue parkingLotQueue() {

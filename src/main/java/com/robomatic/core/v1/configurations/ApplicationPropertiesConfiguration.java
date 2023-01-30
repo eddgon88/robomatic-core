@@ -2,6 +2,7 @@ package com.robomatic.core.v1.configurations;
 
 import com.robomatic.core.v1.dtos.ConstantsDto;
 import com.robomatic.core.v1.dtos.QueuesDto;
+import com.robomatic.core.v1.dtos.executor.ExecutorDto;
 import com.robomatic.core.v1.dtos.scheduler.SchedulerDto;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -27,5 +28,12 @@ public class ApplicationPropertiesConfiguration {
     public SchedulerDto scheduler() {
         return new SchedulerDto();
     }
+
+    @Bean
+    @ConfigurationProperties(prefix = "executor")
+    public ExecutorDto executor() {
+        return new ExecutorDto();
+    }
+
 
 }

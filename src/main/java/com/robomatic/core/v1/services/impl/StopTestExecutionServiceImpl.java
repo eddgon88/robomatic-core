@@ -1,5 +1,6 @@
 package com.robomatic.core.v1.services.impl;
 
+import com.robomatic.core.v1.clients.TestExecutorClient;
 import com.robomatic.core.v1.dtos.QueuesDto;
 import com.robomatic.core.v1.entities.TestExecutionEntity;
 import com.robomatic.core.v1.enums.StatusEnum;
@@ -25,6 +26,9 @@ public class StopTestExecutionServiceImpl implements StopTestExecutionService {
     @Autowired
     private TestExecutionRepository testExecutionRepository;
 
+    @Autowired
+    private TestExecutorClient testExecutorClient;
+
     @Override
     public TestExecutionEntity stopTestExecution(Integer testId) {
         log.info("Stopping test: {}", testId);
@@ -32,7 +36,8 @@ public class StopTestExecutionServiceImpl implements StopTestExecutionService {
                 .orElseThrow(() -> new NotFoundException(NotFoundErrorCode.E404003));
         log.info("Stopping test execution: {}", testExecution.getTestExecutionId());
 
-        jmsSender.sendQueue(queuesDto.getStopTestExecution(), testExecution);
+        //jmsSender.sendQueue(queuesDto.getStopTestExecution(), testExecution);
+        testExecutorClient.stopTestExecution(testExecution);
 
         testExecution.setStatus(StatusEnum.STOPPED.getCode());
         testExecutionRepository.save(testExecution);

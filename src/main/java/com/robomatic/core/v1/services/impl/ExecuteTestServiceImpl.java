@@ -1,5 +1,6 @@
 package com.robomatic.core.v1.services.impl;
 
+import com.robomatic.core.v1.clients.TestExecutorClient;
 import com.robomatic.core.v1.dtos.QueuesDto;
 import com.robomatic.core.v1.entities.TestCaseEntity;
 import com.robomatic.core.v1.entities.TestEntity;
@@ -41,6 +42,9 @@ public class ExecuteTestServiceImpl implements ExecuteTestService {
     @Autowired
     private QueuesDto queuesDto;
 
+    @Autowired
+    private TestExecutorClient testExecutorClient;
+
     @Override
     public TestExecutionEntity executeTest(Integer testId, Integer testCaseId) {
 
@@ -52,10 +56,12 @@ public class ExecuteTestServiceImpl implements ExecuteTestService {
 
         TestExecutionModel testExecutionModel = testExecutionMapper.createTestExecutionModel(testEntity, testCaseEntity.getFileDir(), testExecutionEntity.getTestExecutionId());
 
-        jmsSender.sendQueue(queuesDto.getSendToExecute(), testExecutionModel);
+        TestExecutionEntity savedEntity = testExecutionRepository.save(testExecutionEntity);
 
-        return testExecutionRepository.save(testExecutionEntity);
+        //jmsSender.sendQueue(queuesDto.getSendToExecute(), testExecutionModel);
+        testExecutorClient.executeTest(testExecutionModel);
 
+        return savedEntity;
     }
     @Override
     public TestExecutionEntity executeDefaultTest(Integer testId) {
