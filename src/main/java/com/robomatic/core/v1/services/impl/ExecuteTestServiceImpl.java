@@ -2,17 +2,21 @@ package com.robomatic.core.v1.services.impl;
 
 import com.robomatic.core.v1.clients.TestExecutorClient;
 import com.robomatic.core.v1.dtos.QueuesDto;
+import com.robomatic.core.v1.entities.ActionEntity;
 import com.robomatic.core.v1.entities.TestCaseEntity;
 import com.robomatic.core.v1.entities.TestEntity;
 import com.robomatic.core.v1.entities.TestExecutionEntity;
+import com.robomatic.core.v1.enums.ActionEnum;
 import com.robomatic.core.v1.exceptions.NotFoundException;
 import com.robomatic.core.v1.exceptions.messages.NotFoundErrorCode;
 import com.robomatic.core.v1.jms.JmsSender;
 import com.robomatic.core.v1.mappers.TestExecutionMapper;
 import com.robomatic.core.v1.models.TestExecutionModel;
+import com.robomatic.core.v1.repositories.ActionRepository;
 import com.robomatic.core.v1.repositories.TestCaseRepository;
 import com.robomatic.core.v1.repositories.TestExecutionRepository;
 import com.robomatic.core.v1.repositories.TestRepository;
+import com.robomatic.core.v1.services.ActionService;
 import com.robomatic.core.v1.services.ExecuteTestService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -45,6 +49,9 @@ public class ExecuteTestServiceImpl implements ExecuteTestService {
     @Autowired
     private TestExecutorClient testExecutorClient;
 
+    @Autowired
+    private ActionService actionService;
+
     @Override
     public TestExecutionEntity executeTest(Integer testId, Integer testCaseId) {
 
@@ -60,6 +67,8 @@ public class ExecuteTestServiceImpl implements ExecuteTestService {
 
         //jmsSender.sendQueue(queuesDto.getSendToExecute(), testExecutionModel);
         testExecutorClient.executeTest(testExecutionModel);
+
+        actionService.createAction(1, null, ActionEnum.EXECUTE.getCode(), null, testId, testExecutionEntity.getId());
 
         return savedEntity;
     }

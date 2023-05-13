@@ -35,4 +35,13 @@ public enum StatusEnum {
         throw new NotFoundException(NotFoundErrorCode.E404005);
     }
 
+    public static StatusEnum getStatusByCode(Integer code) {
+        for(StatusEnum m : values()){
+            if( m.code.equals(code)){
+                return m;
+            }
+        }
+        throw new NotFoundException(NotFoundErrorCode.E404005);
+    }
+
 }

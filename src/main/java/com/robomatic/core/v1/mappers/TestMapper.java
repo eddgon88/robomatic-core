@@ -1,5 +1,6 @@
 package com.robomatic.core.v1.mappers;
 
+import com.robomatic.core.v1.entities.ActionRelationalEntity;
 import com.robomatic.core.v1.entities.FolderEntity;
 import com.robomatic.core.v1.entities.TestCaseEntity;
 import com.robomatic.core.v1.entities.TestEntity;
@@ -55,7 +56,7 @@ public class TestMapper {
 
     }
 
-    public RecordModel testToRecord(TestEntity testEntity, String permission) {
+    public RecordModel testToRecord(TestEntity testEntity, String permission, String name) {
         return RecordModel.builder()
                 .id(testEntity.getId())
                 .recordId(testEntity.getTestId())
@@ -63,8 +64,22 @@ public class TestMapper {
                 .folderId(testEntity.getFolderId())
                 .name(testEntity.getName())
                 .permissions(permission)
+                .user(name)
                 .build();
     }
+    public RecordModel testAndActionToRecord(TestEntity testEntity, ActionRelationalEntity action, String permission) {
+        return RecordModel.builder()
+                .id(testEntity.getId())
+                .recordId(testEntity.getTestId())
+                .type("test")
+                .folderId(testEntity.getFolderId())
+                .name(testEntity.getName())
+                .permissions(permission)
+                .user(action.getUserFrom().getFullName())
+                .lastUpdate(action.getDate())
+                .build();
+    }
+
 
     public RecordModel folderToRecord(FolderEntity folderEntity) {
         return RecordModel.builder()

@@ -16,5 +16,6 @@ public class TestExecutionModel {
     private Integer threads;
     private String name;
     private String testExecutionId;
+    private boolean web;
 
 }

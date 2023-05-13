@@ -23,6 +23,7 @@ public class TestExecutionMapper {
                 .threads(testEntity.getThreads())
                 .name(testEntity.getName())
                 .testExecutionId(testExecutionId)
+                .web(testEntity.isWeb())
                 .build();
 
     }

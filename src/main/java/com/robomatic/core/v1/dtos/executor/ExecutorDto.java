@@ -12,5 +12,6 @@ import lombok.NoArgsConstructor;
 public class ExecutorDto {
 
     private String baseUrl;
+    private String webBaseUrl;
     private Endpoint endpoint;
 }
