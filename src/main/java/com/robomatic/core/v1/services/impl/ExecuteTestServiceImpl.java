@@ -2,17 +2,18 @@ package com.robomatic.core.v1.services.impl;
 
 import com.robomatic.core.v1.clients.TestExecutorClient;
 import com.robomatic.core.v1.dtos.QueuesDto;
-import com.robomatic.core.v1.entities.ActionEntity;
 import com.robomatic.core.v1.entities.TestCaseEntity;
 import com.robomatic.core.v1.entities.TestEntity;
 import com.robomatic.core.v1.entities.TestExecutionEntity;
 import com.robomatic.core.v1.enums.ActionEnum;
+import com.robomatic.core.v1.enums.StatusEnum;
+import com.robomatic.core.v1.exceptions.InternalErrorException;
 import com.robomatic.core.v1.exceptions.NotFoundException;
+import com.robomatic.core.v1.exceptions.messages.InternalErrorCode;
 import com.robomatic.core.v1.exceptions.messages.NotFoundErrorCode;
 import com.robomatic.core.v1.jms.JmsSender;
 import com.robomatic.core.v1.mappers.TestExecutionMapper;
 import com.robomatic.core.v1.models.TestExecutionModel;
-import com.robomatic.core.v1.repositories.ActionRepository;
 import com.robomatic.core.v1.repositories.TestCaseRepository;
 import com.robomatic.core.v1.repositories.TestExecutionRepository;
 import com.robomatic.core.v1.repositories.TestRepository;
@@ -65,18 +66,26 @@ public class ExecuteTestServiceImpl implements ExecuteTestService {
 
         TestExecutionEntity savedEntity = testExecutionRepository.save(testExecutionEntity);
 
-        //jmsSender.sendQueue(queuesDto.getSendToExecute(), testExecutionModel);
-        testExecutorClient.executeTest(testExecutionModel);
-
         actionService.createAction(1, null, ActionEnum.EXECUTE.getCode(), null, testId, testExecutionEntity.getId());
+
+        try {
+            //jmsSender.sendQueue(queuesDto.getSendToExecute(), testExecutionModel);
+            testExecutorClient.executeTest(testExecutionModel);
+        } catch (Exception e) {
+            log.error(e.getMessage());
+            savedEntity.setStatus(StatusEnum.FAILED.getCode());
+            testExecutionRepository.save(savedEntity);
+            throw new InternalErrorException(InternalErrorCode.E500001);
+        }
 
         return savedEntity;
     }
+
     @Override
     public TestExecutionEntity executeDefaultTest(Integer testId) {
 
         TestCaseEntity testCaseEntity = testCaseRepository.getDefaultByTestId(testId)
-                .orElseThrow(() ->new NotFoundException(E404001));
+                .orElseThrow(() -> new NotFoundException(E404001));
 
         return executeTest(testId, testCaseEntity.getId());
 

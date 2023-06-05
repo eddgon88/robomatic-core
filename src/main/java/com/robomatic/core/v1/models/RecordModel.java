@@ -23,5 +23,6 @@ public class RecordModel {
     private LocalDateTime lastUpdate;
     private LocalDateTime lastExecution;
     private String lastExecutionState;
+    private Boolean isRunning;
 
 }

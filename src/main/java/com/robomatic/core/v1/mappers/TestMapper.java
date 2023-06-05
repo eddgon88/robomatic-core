@@ -67,7 +67,7 @@ public class TestMapper {
                 .user(name)
                 .build();
     }
-    public RecordModel testAndActionToRecord(TestEntity testEntity, ActionRelationalEntity action, String permission) {
+    public RecordModel testAndActionToRecord(TestEntity testEntity, ActionRelationalEntity action, String permission, Boolean isRunning) {
         return RecordModel.builder()
                 .id(testEntity.getId())
                 .recordId(testEntity.getTestId())
@@ -77,6 +77,7 @@ public class TestMapper {
                 .permissions(permission)
                 .user(action.getUserFrom().getFullName())
                 .lastUpdate(action.getDate())
+                .isRunning(isRunning)
                 .build();
     }
 

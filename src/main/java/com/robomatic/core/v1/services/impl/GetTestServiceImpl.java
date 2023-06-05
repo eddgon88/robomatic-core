@@ -25,6 +25,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static com.robomatic.core.v1.exceptions.messages.NotFoundErrorCode.E404001;
 
@@ -58,37 +59,6 @@ public class GetTestServiceImpl implements GetTestService {
 
     @Override
     public List<RecordModel> getTests(Integer userId, Integer folderId) {
-        /*UserEntity user = userRepository.findById(userId).orElseThrow(() -> new NotFoundException(E404006));
-        List<RecordModel> records = new java.util.ArrayList<>();
-        List<Integer> testIds = new java.util.ArrayList<>();
-        List<Integer> folderIds = new java.util.ArrayList<>();
-
-        List<ActionEntity> actions = actionRepository.findActionsByUser(userId);
-
-        actions.forEach(a -> {
-            if (a.getUserFrom().equals(userId) && a.getActionId().equals(ActionEnum.CREATE.getCode()) && a.getTestId() != null) {
-                testIds.add(a.getTestId());
-            } else if (a.getUserTo().equals(userId) && a.getTestId() != null && a.getFolderId() == null) {
-                testIds.add(a.getTestId());
-            } else if (a.getUserTo().equals(userId) && a.getTestId() == null && a.getFolderId() != null) {
-                folderIds.add(a.getFolderId());
-            }
-        });
-        List<TestEntity> tests = testRepository.findAllById(testIds);
-        tests.stream().filter(t -> t.getFolderId().equals(folderId)).forEach(t -> {
-            folderIds.add(t.getFolderId());
-            ActionEntity action = actions.stream().filter(a -> a.getTestId().equals(t.getId())).findFirst().orElse(null);
-            assert action != null;
-            if (action.getActionId().equals(ActionEnum.CREATE.getCode())) records.add(testMapper.testToRecord(t, PermissionsEnum.OWNER.getValue(), user.getFullName()));
-            if (action.getActionId().equals(ActionEnum.EDIT_PERMISSION.getCode())) records.add(testMapper.testToRecord(t, PermissionsEnum.EDIT.getValue(), user.getFullName()));
-            if (action.getActionId().equals(ActionEnum.EXECUTE_PERMISSION.getCode())) records.add(testMapper.testToRecord(t, PermissionsEnum.EXECUTE.getValue(), user.getFullName()));
-            if (action.getActionId().equals(ActionEnum.VIEW_PERMISSION.getCode())) records.add(testMapper.testToRecord(t, PermissionsEnum.VIEW.getValue(), user.getFullName()));
-        });
-        List<FolderEntity> folders = folderRepository.findAllById(folderIds);
-        folders.stream().filter(f -> !f.getId().equals(0) && f.getFolderId().equals(folderId)).forEach(f -> {
-            records.add(testMapper.folderToRecord(f));
-        });
-        return records;*/
         return getTestList(userId, folderId);
     }
 
@@ -109,31 +79,42 @@ public class GetTestServiceImpl implements GetTestService {
             }
         });
 
+        fillRecords(records, tests, folders, actions, folderId);
+        return records;
+    }
+
+    private void fillRecords(List<RecordModel> records, List<TestEntity> tests, List<FolderEntity> folders, List<ActionRelationalEntity> actions, Integer folderId) {
+
         tests.stream().filter(t -> t.getFolderId().equals(folderId)).forEach(t -> {
             ActionRelationalEntity action = actions.stream().filter(a -> a.getTest().getId().equals(t.getId())).findFirst().orElse(null);
+            Boolean isRunning = checkIsRunning(t.getId());
             assert action != null;
             if (action.getActionId().equals(ActionEnum.CREATE.getCode()))
-                records.add(testMapper.testAndActionToRecord(t, action, PermissionsEnum.OWNER.getValue()));
+                records.add(testMapper.testAndActionToRecord(t, action, PermissionsEnum.OWNER.getValue(), isRunning));
             if (action.getActionId().equals(ActionEnum.EDIT_PERMISSION.getCode()))
-                records.add(testMapper.testAndActionToRecord(t, action, PermissionsEnum.EDIT.getValue()));
+                records.add(testMapper.testAndActionToRecord(t, action, PermissionsEnum.EDIT.getValue(), isRunning));
             if (action.getActionId().equals(ActionEnum.EXECUTE_PERMISSION.getCode()))
-                records.add(testMapper.testAndActionToRecord(t, action, PermissionsEnum.EXECUTE.getValue()));
+                records.add(testMapper.testAndActionToRecord(t, action, PermissionsEnum.EXECUTE.getValue(), isRunning));
             if (action.getActionId().equals(ActionEnum.VIEW_PERMISSION.getCode()))
-                records.add(testMapper.testAndActionToRecord(t, action, PermissionsEnum.VIEW.getValue()));
+                records.add(testMapper.testAndActionToRecord(t, action, PermissionsEnum.VIEW.getValue(), isRunning));
         });
         getLastExecution(records);
         folders.stream().filter(f -> !f.getId().equals(0) && f.getFolderId().equals(folderId))
                 .forEach(f -> records.add(testMapper.folderToRecord(f)));
-        return records;
     }
 
-    private List<RecordModel> getLastExecution(List<RecordModel> records) {
+    private Boolean checkIsRunning(Integer testId) {
+        AtomicReference<Boolean> isRunning = new AtomicReference<>(false);
+        testExecutionRepository.findByTestIdAndRunningStatus(testId).ifPresent(t -> isRunning.set(true));
+        return isRunning.get();
+    }
+
+    private void getLastExecution(List<RecordModel> records) {
         records.forEach(r -> actionRepository.findLastExecutionActionByTestId(r.getId()).ifPresent(action -> {
             TestExecutionEntity testExecution = testExecutionRepository.findById(action.getTestExecutionId()).orElse(TestExecutionEntity.builder().build());
             r.setLastExecution(action.getDate());
             r.setLastExecutionState(StatusEnum.getStatusByCode(testExecution.getStatus()).getValue());
         }));
-        return records;
     }
 
     @Override

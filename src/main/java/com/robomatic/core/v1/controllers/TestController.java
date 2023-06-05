@@ -66,7 +66,6 @@ public class TestController {
         return functionCaller.callFunction(testId, function, HttpStatus.OK);
     }
 
-    //@CrossOrigin(origins = "http://localhost:4200")
     @GetMapping(path = "/list/{userId}/{folderId}", produces = APPLICATION_JSON_VALUE)
     public ResponseEntity<Object> getTestList(@PathVariable("userId") Integer userId, @PathVariable("folderId") Integer folderId) {
         UnaryOperator<Object> function = req -> getTestService.getTests((Integer) req, folderId);
