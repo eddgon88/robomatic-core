@@ -25,11 +25,12 @@ public class TestMapper {
                 .threads(createTestRequest.getThreads())
                 .folderId(createTestRequest.getFolderId())
                 .web(createTestRequest.isWeb())
+                .description(createTestRequest.getDescription())
                 .build();
 
     }
 
-    public TestEntity UpdateTestEntity(UpdateTestRequestModel updateTestRequest) {
+    public TestEntity updateTestEntity(UpdateTestRequestModel updateTestRequest) {
 
         return TestEntity.builder()
                 .id(updateTestRequest.getId())
@@ -52,6 +53,7 @@ public class TestMapper {
                 .script(testEntity.getScript())
                 .threads(testEntity.getThreads())
                 .testCaseId(testCaseEntity.getId())
+                .description(testEntity.getDescription())
                 .build();
 
     }
@@ -67,6 +69,7 @@ public class TestMapper {
                 .user(name)
                 .build();
     }
+
     public RecordModel testAndActionToRecord(TestEntity testEntity, ActionRelationalEntity action, String permission, Boolean isRunning) {
         return RecordModel.builder()
                 .id(testEntity.getId())

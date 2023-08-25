@@ -2,7 +2,7 @@ package com.robomatic.core.v1.exceptions.messages;
 
 public enum BadRequestErrorCode {
 
-    E400002("400002", "Custom key payments_notify_user is missing."),
+    E400002("400002", "Conflicts creating folder."),
     E400003("400003", "Conflicts creating order."),
     E400004("400004", "Merchant-method customs values not found."),
     E400005("400005", "Couldn't create order custom values properly."),

@@ -34,8 +34,6 @@ public class UserEntity {
 
     private String email;
 
-    private String pass;
-
     private boolean enabled;
 
 }

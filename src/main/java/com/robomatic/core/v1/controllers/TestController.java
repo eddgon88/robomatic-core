@@ -1,9 +1,13 @@
 package com.robomatic.core.v1.controllers;
 
 import com.robomatic.core.v1.commons.FunctionCaller;
+import com.robomatic.core.v1.exceptions.InternalErrorException;
+import com.robomatic.core.v1.exceptions.messages.InternalErrorCode;
 import com.robomatic.core.v1.models.CreateTestRequestModel;
+import com.robomatic.core.v1.models.TestModel;
 import com.robomatic.core.v1.models.UpdateTestRequestModel;
 import com.robomatic.core.v1.services.CreateTestService;
+import com.robomatic.core.v1.services.DeleteTestService;
 import com.robomatic.core.v1.services.ExecuteTestService;
 import com.robomatic.core.v1.services.GetTestService;
 import com.robomatic.core.v1.services.StopTestExecutionService;
@@ -13,6 +17,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -20,6 +25,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.io.IOException;
 import java.util.function.UnaryOperator;
 
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
@@ -44,6 +50,9 @@ public class TestController {
 
     @Autowired
     private StopTestExecutionService stopTestExecutionService;
+
+    @Autowired
+    private DeleteTestService deleteTestService;
 
     @Autowired
     private FunctionCaller functionCaller;
@@ -78,4 +87,20 @@ public class TestController {
         return functionCaller.callFunction(testId, function, HttpStatus.OK);
     }
 
+    @GetMapping(path = "/{testId}", produces = APPLICATION_JSON_VALUE)
+    public ResponseEntity<Object> getTest(@PathVariable("testId") Integer testId) {
+        TestModel res = new TestModel();
+        try {
+            res = getTestService.getTest(testId);
+        } catch (IOException e) {
+            throw new InternalErrorException(InternalErrorCode.E500000);
+        }
+        return new ResponseEntity<>(res, HttpStatus.OK);
+    }
+
+    @PostMapping(path = "/delete/{testId}", produces = APPLICATION_JSON_VALUE)
+    public ResponseEntity<Object> deleteTest(@PathVariable("testId") Integer testId) {
+        UnaryOperator<Object> function = req -> deleteTestService.deleteTest((Integer) req);
+        return functionCaller.callFunction(testId, function, HttpStatus.OK);
+    }
 }

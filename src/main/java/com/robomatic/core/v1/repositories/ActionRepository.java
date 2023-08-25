@@ -15,4 +15,7 @@ public interface ActionRepository extends JpaRepository<ActionEntity, Integer> {
 
     @Query(value = "SELECT * FROM core.action a WHERE test_id = :testId AND a.action_id = 4 ORDER BY date DESC LIMIT 1", nativeQuery=true)
     Optional<ActionEntity> findLastExecutionActionByTestId(@Param("testId") Integer testId);
+
+    @Query(value = "SELECT a FROM ActionEntity a WHERE a.actionId = 4 AND a.testExecutionId = :testExecution")
+    Optional<ActionEntity> findExecutionActionByTestExecution(@Param("testExecution") Integer testExecution);
 }

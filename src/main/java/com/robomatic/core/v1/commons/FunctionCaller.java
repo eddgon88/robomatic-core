@@ -13,6 +13,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 
+import java.io.IOException;
 import java.util.function.UnaryOperator;
 
 import static com.robomatic.core.v1.exceptions.messages.InternalErrorCode.E500000;

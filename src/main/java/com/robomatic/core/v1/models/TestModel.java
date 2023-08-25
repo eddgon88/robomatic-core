@@ -19,5 +19,8 @@ public class TestModel {
     private boolean web;
     private Integer folderId;
     private Integer testCaseId;
+    private String testCases;
+    private String permissions;
+    private String description;
 
 }

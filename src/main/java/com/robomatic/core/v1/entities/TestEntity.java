@@ -38,4 +38,6 @@ public class TestEntity {
     @Column(name = "folder_id")
     private Integer folderId;
 
+    private String description;
+
 }

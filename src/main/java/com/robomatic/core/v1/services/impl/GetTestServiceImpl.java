@@ -8,7 +8,10 @@ import com.robomatic.core.v1.entities.TestExecutionEntity;
 import com.robomatic.core.v1.enums.ActionEnum;
 import com.robomatic.core.v1.enums.PermissionsEnum;
 import com.robomatic.core.v1.enums.StatusEnum;
+import com.robomatic.core.v1.exceptions.InternalErrorException;
 import com.robomatic.core.v1.exceptions.NotFoundException;
+import com.robomatic.core.v1.exceptions.messages.InternalErrorCode;
+import com.robomatic.core.v1.exceptions.messages.NotFoundErrorCode;
 import com.robomatic.core.v1.mappers.TestMapper;
 import com.robomatic.core.v1.models.RecordModel;
 import com.robomatic.core.v1.models.TestModel;
@@ -21,11 +24,22 @@ import com.robomatic.core.v1.repositories.TestRepository;
 import com.robomatic.core.v1.repositories.UserRepository;
 import com.robomatic.core.v1.services.GetTestService;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.io.Charsets;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.Base64;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Stream;
 
 import static com.robomatic.core.v1.exceptions.messages.NotFoundErrorCode.E404001;
 
@@ -72,6 +86,8 @@ public class GetTestServiceImpl implements GetTestService {
         actions.forEach(a -> {
             if (a.getUserFrom().getId().equals(userId) && a.getActionId().equals(ActionEnum.CREATE.getCode()) && a.getTest() != null) {
                 tests.add(a.getTest());
+            } else if (a.getUserFrom().getId().equals(userId) && a.getTest() == null && a.getFolder() != null) {
+                folders.add(a.getFolder());
             } else if (a.getUserTo().getId().equals(userId) && a.getTest() != null && a.getFolder() == null) {
                 tests.add(a.getTest());
             } else if (a.getUserTo().getId().equals(userId) && a.getTest() == null && a.getFolder() != null) {
@@ -119,12 +135,28 @@ public class GetTestServiceImpl implements GetTestService {
 
     @Override
     public TestModel getTest(Integer testId) {
-        TestEntity testEntity = testRepository.getById(testId);
+        TestEntity testEntity = testRepository.findById(testId)
+                .orElseThrow(() -> new NotFoundException(NotFoundErrorCode.E404002));
 
         TestCaseEntity testCaseEntity = testCaseRepository.getDefaultByTestId(testId)
                 .orElseThrow(() -> new NotFoundException(E404001));
+        TestModel test = testMapper.getTestModel(testEntity, testCaseEntity);
+        test.setTestCases(getTestCases(testCaseEntity.getFileDir()));
+        //configurar el usuario cuando se aplique la seguridad JWT
+        test.setPermissions(PermissionsEnum.OWNER.getValue());
 
-        return testMapper.getTestModel(testEntity, testCaseEntity);
+        return test;
+    }
+
+    private String getTestCases(String testCaseDir) {
+        StringBuilder resultStringBuilder = new StringBuilder();
+        try (Stream<String> stream = Files.lines(Paths.get(testCaseDir))) {
+            stream.forEach(s -> resultStringBuilder.append(s).append("\n"));
+        } catch (Exception e) {
+            throw new InternalErrorException(InternalErrorCode.E500000);
+        }
+        byte[] encodedBytes = Base64.getEncoder().encode(resultStringBuilder.toString().getBytes(StandardCharsets.UTF_8));
+        return new String(encodedBytes);
     }
 
 }

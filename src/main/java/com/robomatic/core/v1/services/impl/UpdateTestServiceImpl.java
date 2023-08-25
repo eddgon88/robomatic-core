@@ -44,6 +44,7 @@ public class UpdateTestServiceImpl implements UpdateTestService {
             testEntity.setScript(updateTestRequest.getScript());
             testEntity.setThreads(updateTestRequest.getThreads());
             testEntity.setWeb(updateTestRequest.isWeb());
+            testEntity.setDescription(updateTestRequest.getDescription());
 
             updateTestCaseService.updateTestCase(updateTestRequest.getTestCaseId(),
                     updateTestRequest.getTestCases());

@@ -20,6 +20,7 @@ public class UpdateTestRequestModel {
     private Integer testCaseId;
     private boolean web;
     private Integer folderId;
+    private String description;
 
 
 }

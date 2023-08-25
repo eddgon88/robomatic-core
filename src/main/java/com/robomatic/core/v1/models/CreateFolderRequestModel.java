@@ -9,14 +9,9 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class CreateTestRequestModel {
+public class CreateFolderRequestModel {
 
     private String name;
-    private Integer threads;
-    private String script;
-    private String testCases;
-    private boolean web;
     private Integer folderId;
-    private String description;
 
 }
