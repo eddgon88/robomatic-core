@@ -1,4 +1,4 @@
-package com.robomatic.core.v1.models;
+package com.robomatic.core.v1.dtos.filemanager;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -9,9 +9,10 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class EvidenceModel {
+public class FileManagerDto {
 
-    private String fileName;
-    private String fileContent;
+    private String baseUrl;
+    private String webBaseUrl;
+    private Endpoint endpoint;
 
 }

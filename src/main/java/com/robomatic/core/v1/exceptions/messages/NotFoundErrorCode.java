@@ -6,7 +6,7 @@ public enum NotFoundErrorCode {
     E404002("404002", "Test not found."),
     E404003("404003", "Test Execution not found."),
     E404005("404005", "status value not found."),
-    E404006("404006", "User not found"),
+    E404006("404006", "Null message"),
     E404007("404007", "folder not found."),
     E404008("404008", "Method not found."),
     E404009("404009", "Transaction status not found."),

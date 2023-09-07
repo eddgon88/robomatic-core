@@ -3,6 +3,7 @@ package com.robomatic.core.v1.configurations;
 import com.robomatic.core.v1.dtos.ConstantsDto;
 import com.robomatic.core.v1.dtos.QueuesDto;
 import com.robomatic.core.v1.dtos.executor.ExecutorDto;
+import com.robomatic.core.v1.dtos.filemanager.FileManagerDto;
 import com.robomatic.core.v1.dtos.scheduler.SchedulerDto;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -33,6 +34,12 @@ public class ApplicationPropertiesConfiguration {
     @ConfigurationProperties(prefix = "executor")
     public ExecutorDto executor() {
         return new ExecutorDto();
+    }
+
+    @Bean
+    @ConfigurationProperties(prefix = "file-manager")
+    public FileManagerDto fileManager() {
+        return new FileManagerDto();
     }
 
 
