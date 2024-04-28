@@ -16,6 +16,8 @@ public class TestModel {
     private String name;
     private Integer threads;
     private String script;
+    private String beforeScript;
+    private String afterScript;
     private boolean web;
     private Integer folderId;
     private Integer testCaseId;

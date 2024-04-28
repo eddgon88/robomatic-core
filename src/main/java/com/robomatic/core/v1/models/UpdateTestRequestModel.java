@@ -16,6 +16,8 @@ public class UpdateTestRequestModel {
     private String name;
     private Integer threads;
     private String script;
+    private String beforeScript;
+    private String afterScript;
     private String testCases;
     private Integer testCaseId;
     private boolean web;

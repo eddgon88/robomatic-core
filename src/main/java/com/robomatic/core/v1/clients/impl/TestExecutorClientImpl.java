@@ -35,7 +35,7 @@ public class TestExecutorClientImpl implements TestExecutorClient {
 
     @Override
     public void executeTest(TestExecutionModel testExecutionModel) {
-        String baseUrl = testExecutionModel.isWeb() ? executorDto.getWebBaseUrl() : executorDto.getBaseUrl();
+        String baseUrl = executorDto.getBaseUrl();
         String url = StringUtils.join(baseUrl, executorDto.getEndpoint().getExecuteTest());
 
         String json = gson.toJson(testExecutionModel);

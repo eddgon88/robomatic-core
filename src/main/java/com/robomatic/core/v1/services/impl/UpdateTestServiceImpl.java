@@ -42,6 +42,8 @@ public class UpdateTestServiceImpl implements UpdateTestService {
             testEntity.setFolderId(updateTestRequest.getFolderId());
             testEntity.setName(updateTestRequest.getName());
             testEntity.setScript(updateTestRequest.getScript());
+            testEntity.setBeforeScript(updateTestRequest.getBeforeScript());
+            testEntity.setAfterScript(updateTestRequest.getAfterScript());
             testEntity.setThreads(updateTestRequest.getThreads());
             testEntity.setWeb(updateTestRequest.isWeb());
             testEntity.setDescription(updateTestRequest.getDescription());

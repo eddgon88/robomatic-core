@@ -36,4 +36,6 @@ public class UserEntity {
 
     private boolean enabled;
 
+    private String pass;
+
 }

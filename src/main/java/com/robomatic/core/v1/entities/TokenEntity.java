@@ -11,39 +11,31 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.Table;
+import java.util.Date;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "test", schema = "core")
-public class TestEntity {
+@Table(name = "token", schema = "core")
+public class TokenEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    @Column(name = "test_id")
-    private String testId;
+    private String token;
 
-    private String name;
+    private Integer status;
 
-    private Integer threads;
+    @Column(name = "user_id")
+    private Integer userId;
 
-    private String script;
+    @Column(name = "creation_date")
+    private Date creationDate;
 
-    @Column(name = "before_script")
-    private String beforeScript;
-
-    @Column(name = "after_script")
-    private String afterScript;
-
-    private boolean web;
-
-    @Column(name = "folder_id")
-    private Integer folderId;
-
-    private String description;
+    @Column(name = "expiration_date")
+    private Date expirationDate;
 
 }

@@ -14,6 +14,8 @@ public class CreateTestRequestModel {
     private String name;
     private Integer threads;
     private String script;
+    private String beforeScript;
+    private String afterScript;
     private String testCases;
     private boolean web;
     private Integer folderId;

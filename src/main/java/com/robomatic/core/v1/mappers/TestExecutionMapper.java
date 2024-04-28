@@ -19,6 +19,8 @@ public class TestExecutionMapper {
 
         return TestExecutionModel.builder()
                 .script(testEntity.getScript())
+                .beforeScript(testEntity.getBeforeScript())
+                .afterScript(testEntity.getAfterScript())
                 .testCasesFile(testCaseFileDir)
                 .threads(testEntity.getThreads())
                 .name(testEntity.getName())

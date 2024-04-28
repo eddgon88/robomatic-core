@@ -12,6 +12,8 @@ import lombok.NoArgsConstructor;
 public class TestExecutionModel {
 
     private String script;
+    private String beforeScript;
+    private String afterScript;
     private String testCasesFile;
     private Integer threads;
     private String name;
