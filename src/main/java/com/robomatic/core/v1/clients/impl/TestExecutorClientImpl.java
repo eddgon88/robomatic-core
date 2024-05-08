@@ -7,6 +7,7 @@ import com.robomatic.core.v1.clients.TestExecutorClient;
 import com.robomatic.core.v1.dtos.executor.ExecutorDto;
 import com.robomatic.core.v1.entities.TestExecutionEntity;
 import com.robomatic.core.v1.exceptions.BadGatewayException;
+import com.robomatic.core.v1.models.ExecutionPort;
 import com.robomatic.core.v1.models.TestExecutionModel;
 import com.robomatic.core.v1.utils.LogUtils;
 import lombok.extern.slf4j.Slf4j;
@@ -15,6 +16,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
@@ -74,6 +76,21 @@ public class TestExecutorClientImpl implements TestExecutorClient {
         } catch (Exception e) {
             throwError(e.getMessage(), "502001", testExecution.getTestExecutionId());
         }
+    }
+
+    @Override
+    public ExecutionPort getExecutionPorts(String executionId) {
+        String url = StringUtils.join(executorDto.getBaseUrl(), executorDto.getEndpoint().getGetExecutionPort().replace("##executionId##", executionId));
+
+        try {
+            ResponseEntity<String> res = restTemplate.getForEntity(url, String.class);
+            return gson.fromJson(res.getBody(), ExecutionPort.class);
+        } catch (HttpStatusCodeException e) {
+            throwError(StringUtils.isBlank(e.getResponseBodyAsString()) ? e.getMessage() : e.getResponseBodyAsString(), "502000", executionId);
+        } catch (Exception e) {
+            throwError(e.getMessage(), "502001", executionId);
+        }
+        return null;
     }
 
     private void throwError(String messageError, String codeError, String referenceId) {

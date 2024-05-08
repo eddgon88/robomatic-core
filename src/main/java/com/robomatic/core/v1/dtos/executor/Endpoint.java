@@ -13,5 +13,6 @@ public class Endpoint {
 
     private String executeTest;
     private String stopTestExecution;
+    private String getExecutionPort;
 
 }

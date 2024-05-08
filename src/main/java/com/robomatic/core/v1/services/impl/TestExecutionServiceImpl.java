@@ -1,9 +1,11 @@
 package com.robomatic.core.v1.services.impl;
 
+import com.robomatic.core.v1.clients.TestExecutorClient;
 import com.robomatic.core.v1.entities.ActionRelationalEntity;
 import com.robomatic.core.v1.entities.TestExecutionEntity;
 import com.robomatic.core.v1.exceptions.NotFoundException;
 import com.robomatic.core.v1.exceptions.messages.NotFoundErrorCode;
+import com.robomatic.core.v1.models.ExecutionPort;
 import com.robomatic.core.v1.models.TestExecutionRecordModel;
 import com.robomatic.core.v1.repositories.ActionRelationalRepository;
 import com.robomatic.core.v1.repositories.TestExecutionRepository;
@@ -29,6 +31,9 @@ public class TestExecutionServiceImpl implements TestExecutionService {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private TestExecutorClient testExecutorClient;
+
     @Override
     public List<TestExecutionRecordModel> getTestExecutionList(Integer testId) {
         log.info("Getting list of executions for test: {}", testId);
@@ -53,5 +58,15 @@ public class TestExecutionServiceImpl implements TestExecutionService {
             log.error("Exception getting list of executions - {}", e.getMessage());
             throw e;
         }
+    }
+
+    @Override
+    public ExecutionPort getExecutionPort(Integer testId) {
+        log.info("getting execution ports: {}", testId);
+        TestExecutionEntity testExecution = testExecutionRepository.findByTestIdAndRunningStatus(testId)
+                .orElseThrow(() -> new NotFoundException(NotFoundErrorCode.E404003));
+        log.info("getting execution ports: {}", testExecution.getTestExecutionId());
+
+        return testExecutorClient.getExecutionPorts(testExecution.getTestExecutionId());
     }
 }

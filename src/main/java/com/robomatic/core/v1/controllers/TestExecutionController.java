@@ -34,4 +34,10 @@ public class TestExecutionController {
         return functionCaller.callFunction(testId, function, HttpStatus.OK);
     }
 
+    @GetMapping(path = "/ports/{testId}", produces = APPLICATION_JSON_VALUE)
+    public ResponseEntity<Object> getExecutionPorts(@PathVariable("testId") Integer testId) {
+        UnaryOperator<Object> function = req -> testExecutionService.getExecutionPort((Integer) req);
+        return functionCaller.callFunction(testId, function, HttpStatus.OK);
+    }
+
 }
