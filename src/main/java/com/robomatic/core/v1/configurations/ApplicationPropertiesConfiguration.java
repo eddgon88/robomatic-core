@@ -5,9 +5,13 @@ import com.robomatic.core.v1.dtos.QueuesDto;
 import com.robomatic.core.v1.dtos.executor.ExecutorDto;
 import com.robomatic.core.v1.dtos.filemanager.FileManagerDto;
 import com.robomatic.core.v1.dtos.scheduler.SchedulerDto;
+import com.robomatic.core.v1.entities.UserEntity;
+import com.robomatic.core.v1.models.UserModel;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.data.querydsl.QPageRequest;
+import org.springframework.web.context.annotation.RequestScope;
 
 @Configuration
 public class ApplicationPropertiesConfiguration {
@@ -40,6 +44,12 @@ public class ApplicationPropertiesConfiguration {
     @ConfigurationProperties(prefix = "file-manager")
     public FileManagerDto fileManager() {
         return new FileManagerDto();
+    }
+
+    @Bean
+    @RequestScope
+    public UserModel requestScopeRequestData() {
+        return new UserModel();
     }
 
 

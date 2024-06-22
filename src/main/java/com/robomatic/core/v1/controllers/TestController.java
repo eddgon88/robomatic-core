@@ -75,10 +75,10 @@ public class TestController {
         return functionCaller.callFunction(testId, function, HttpStatus.OK);
     }
 
-    @GetMapping(path = "/list/{userId}/{folderId}", produces = APPLICATION_JSON_VALUE)
-    public ResponseEntity<Object> getTestList(@PathVariable("userId") Integer userId, @PathVariable("folderId") Integer folderId) {
-        UnaryOperator<Object> function = req -> getTestService.getTests((Integer) req, folderId);
-        return functionCaller.callFunction(userId, function, HttpStatus.OK);
+    @GetMapping(path = "/list/{folderId}", produces = APPLICATION_JSON_VALUE)
+    public ResponseEntity<Object> getTestList(@PathVariable("folderId") Integer folderId) {
+        UnaryOperator<Object> function = req -> getTestService.getTests((Integer) req);
+        return functionCaller.callFunction(folderId, function, HttpStatus.OK);
     }
 
     @PostMapping(path = "/stop/{testId}", produces = APPLICATION_JSON_VALUE)

@@ -8,7 +8,7 @@ import java.util.List;
 
 public interface GetTestService {
 
-    List<RecordModel> getTests(Integer userId, Integer folderId);
+    List<RecordModel> getTests(Integer folderId);
 
     TestModel getTest(Integer testId) throws IOException;
 

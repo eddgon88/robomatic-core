@@ -15,6 +15,7 @@ import com.robomatic.core.v1.exceptions.messages.NotFoundErrorCode;
 import com.robomatic.core.v1.mappers.TestMapper;
 import com.robomatic.core.v1.models.RecordModel;
 import com.robomatic.core.v1.models.TestModel;
+import com.robomatic.core.v1.models.UserModel;
 import com.robomatic.core.v1.repositories.ActionRelationalRepository;
 import com.robomatic.core.v1.repositories.ActionRepository;
 import com.robomatic.core.v1.repositories.FolderRepository;
@@ -71,26 +72,29 @@ public class GetTestServiceImpl implements GetTestService {
     @Autowired
     private TestExecutionRepository testExecutionRepository;
 
+    @Autowired
+    private UserModel user;
+
     @Override
-    public List<RecordModel> getTests(Integer userId, Integer folderId) {
-        return getTestList(userId, folderId);
+    public List<RecordModel> getTests(Integer folderId) {
+        return getTestList(folderId);
     }
 
-    public List<RecordModel> getTestList(Integer userId, Integer folderId) {
+    public List<RecordModel> getTestList(Integer folderId) {
         List<RecordModel> records = new java.util.ArrayList<>();
         List<TestEntity> tests = new java.util.ArrayList<>();
         List<FolderEntity> folders = new java.util.ArrayList<>();
 
-        List<ActionRelationalEntity> actions = actionRelationalRepository.findActionsByUser(userId);
+        List<ActionRelationalEntity> actions = actionRelationalRepository.findActionsByUser(user.getId());
 
         actions.forEach(a -> {
-            if (a.getUserFrom().getId().equals(userId) && a.getActionId().equals(ActionEnum.CREATE.getCode()) && a.getTest() != null) {
+            if (a.getUserFrom().getId().equals(user.getId()) && a.getActionId().equals(ActionEnum.CREATE.getCode()) && a.getTest() != null) {
                 tests.add(a.getTest());
-            } else if (a.getUserFrom().getId().equals(userId) && a.getTest() == null && a.getFolder() != null) {
+            } else if (a.getUserFrom().getId().equals(user.getId()) && a.getTest() == null && a.getFolder() != null) {
                 folders.add(a.getFolder());
-            } else if (a.getUserTo().getId().equals(userId) && a.getTest() != null && a.getFolder() == null) {
+            } else if (a.getUserTo().getId().equals(user.getId()) && a.getTest() != null && a.getFolder() == null) {
                 tests.add(a.getTest());
-            } else if (a.getUserTo().getId().equals(userId) && a.getTest() == null && a.getFolder() != null) {
+            } else if (a.getUserTo().getId().equals(user.getId()) && a.getTest() == null && a.getFolder() != null) {
                 folders.add(a.getFolder());
             }
         });
@@ -102,7 +106,7 @@ public class GetTestServiceImpl implements GetTestService {
     private void fillRecords(List<RecordModel> records, List<TestEntity> tests, List<FolderEntity> folders, List<ActionRelationalEntity> actions, Integer folderId) {
 
         tests.stream().filter(t -> t.getFolderId().equals(folderId)).forEach(t -> {
-            ActionRelationalEntity action = actions.stream().filter(a -> a.getTest().getId().equals(t.getId())).findFirst().orElse(null);
+            ActionRelationalEntity action = actions.stream().filter(a ->a.getTest() != null && a.getTest().getId().equals(t.getId())).findFirst().orElse(null);
             Boolean isRunning = checkIsRunning(t.getId());
             assert action != null;
             if (action.getActionId().equals(ActionEnum.CREATE.getCode()))

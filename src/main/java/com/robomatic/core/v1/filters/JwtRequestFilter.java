@@ -1,6 +1,11 @@
 package com.robomatic.core.v1.filters;
 
+import com.robomatic.core.v1.entities.UserEntity;
+import com.robomatic.core.v1.exceptions.NotFoundException;
+import com.robomatic.core.v1.models.UserModel;
+import com.robomatic.core.v1.repositories.UserRepository;
 import com.robomatic.core.v1.utils.JwtUtil;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -9,11 +14,14 @@ import org.springframework.security.web.authentication.WebAuthenticationDetailsS
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+import javax.annotation.Resource;
 import javax.servlet.FilterChain;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+
+import static com.robomatic.core.v1.exceptions.messages.NotFoundErrorCode.E404008;
 
 @Component
 public class JwtRequestFilter extends OncePerRequestFilter {
@@ -25,6 +33,12 @@ public class JwtRequestFilter extends OncePerRequestFilter {
         this.jwtUtil = jwtUtil;
         this.userDetailsService = userDetailsService;
     }
+
+    @Resource(name = "requestScopeRequestData")
+    private UserModel user;
+
+    @Autowired
+    private UserRepository userRepository;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
@@ -42,6 +56,7 @@ public class JwtRequestFilter extends OncePerRequestFilter {
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             UserDetails userDetails = this.userDetailsService.loadUserByUsername(username);
             if (jwtUtil.validateToken(jwt, userDetails)) {
+                getUser(username);
                 UsernamePasswordAuthenticationToken usernamePasswordAuthenticationToken = new UsernamePasswordAuthenticationToken(
                         userDetails, null, userDetails.getAuthorities());
                 usernamePasswordAuthenticationToken
@@ -50,6 +65,18 @@ public class JwtRequestFilter extends OncePerRequestFilter {
             }
         }
         chain.doFilter(request, response);
+    }
+
+    private void getUser(String mail) {
+        UserEntity userEntity = userRepository.findByEmail(mail)
+                .orElseThrow(() -> new NotFoundException(E404008));
+
+        user.setEmail(userEntity.getEmail());
+        user.setFullName(userEntity.getFullName());
+        user.setId(userEntity.getId());
+        user.setPhone(userEntity.getPhone());
+        user.setRoleId(userEntity.getRoleId());
+        user.setEnabled(userEntity.isEnabled());
     }
 
 }
