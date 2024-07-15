@@ -25,15 +25,9 @@ import com.robomatic.core.v1.repositories.TestRepository;
 import com.robomatic.core.v1.repositories.UserRepository;
 import com.robomatic.core.v1.services.GetTestService;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.io.Charsets;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -106,7 +100,7 @@ public class GetTestServiceImpl implements GetTestService {
     private void fillRecords(List<RecordModel> records, List<TestEntity> tests, List<FolderEntity> folders, List<ActionRelationalEntity> actions, Integer folderId) {
 
         tests.stream().filter(t -> t.getFolderId().equals(folderId)).forEach(t -> {
-            ActionRelationalEntity action = actions.stream().filter(a ->a.getTest() != null && a.getTest().getId().equals(t.getId())).findFirst().orElse(null);
+            ActionRelationalEntity action = actions.stream().filter(a -> a.getTest() != null && a.getTest().getId().equals(t.getId())).findFirst().orElse(null);
             Boolean isRunning = checkIsRunning(t.getId());
             assert action != null;
             if (action.getActionId().equals(ActionEnum.CREATE.getCode()))

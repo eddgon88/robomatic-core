@@ -1,9 +1,11 @@
 package com.robomatic.core.v1.configurations;
 
+import com.robomatic.core.v1.clients.impl.MailClientImpl;
 import com.robomatic.core.v1.dtos.ConstantsDto;
 import com.robomatic.core.v1.dtos.QueuesDto;
 import com.robomatic.core.v1.dtos.executor.ExecutorDto;
 import com.robomatic.core.v1.dtos.filemanager.FileManagerDto;
+import com.robomatic.core.v1.dtos.mail.MailDto;
 import com.robomatic.core.v1.dtos.scheduler.SchedulerDto;
 import com.robomatic.core.v1.entities.UserEntity;
 import com.robomatic.core.v1.models.UserModel;
@@ -44,6 +46,12 @@ public class ApplicationPropertiesConfiguration {
     @ConfigurationProperties(prefix = "file-manager")
     public FileManagerDto fileManager() {
         return new FileManagerDto();
+    }
+
+    @Bean
+    @ConfigurationProperties(prefix = "mail")
+    public MailDto mail() {
+        return new MailDto();
     }
 
     @Bean

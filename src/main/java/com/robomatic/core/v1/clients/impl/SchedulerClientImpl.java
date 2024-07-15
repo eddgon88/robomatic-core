@@ -67,7 +67,7 @@ public class SchedulerClientImpl implements SchedulerClient {
     }
 
     private void throwError(String messageError, String codeError, String referenceId) {
-        String error = LogUtils.formatObjectToJson("Refund Order", String.format("API Error: %s", messageError), referenceId);
+        String error = LogUtils.formatObjectToJson("Send Schedule", String.format("API Error: %s", messageError), referenceId);
         log.error(error);
         throw new BadGatewayException(codeError, messageError);
     }
@@ -86,12 +86,12 @@ public class SchedulerClientImpl implements SchedulerClient {
             ResponseEntity<String> responseEntity = restTemplate.getForEntity(url, String.class);
             job = gson.fromJson(responseEntity.getBody(), JobModel.class);
         } catch (HttpStatusCodeException e) {
-            throwError(StringUtils.isBlank(e.getResponseBodyAsString()) ? e.getMessage() : e.getResponseBodyAsString(), "502001", jobId);
+            throwError(StringUtils.isBlank(e.getResponseBodyAsString()) ? e.getMessage() : e.getResponseBodyAsString(), "502003", jobId);
         } catch (Exception e) {
-            throwError(e.getMessage(), "502003", jobId);
+            throwError(e.getMessage(), "502004", jobId);
         }
         if (job == null) {
-            throwError("job couldn't be reached", "502004", jobId);
+            throwError("job couldn't be reached", "502005", jobId);
         }
         return job;
     }
@@ -109,12 +109,12 @@ public class SchedulerClientImpl implements SchedulerClient {
             ResponseEntity<String> responseEntity = restTemplate.getForEntity(url, String.class);
             jobs = gson.fromJson(responseEntity.getBody(), JobListModel.class);
         } catch (HttpStatusCodeException e) {
-            throwError(StringUtils.isBlank(e.getResponseBodyAsString()) ? e.getMessage() : e.getResponseBodyAsString(), "502001", url);
+            throwError(StringUtils.isBlank(e.getResponseBodyAsString()) ? e.getMessage() : e.getResponseBodyAsString(), "502006", url);
         } catch (Exception e) {
-            throwError(e.getMessage(), "502005", url);
+            throwError(e.getMessage(), "502007", url);
         }
         if (jobs == null) {
-            throwError("jobs couldn't be reached", "502006", url);
+            throwError("jobs couldn't be reached", "502008", url);
         }
         return jobs;
     }
@@ -135,12 +135,12 @@ public class SchedulerClientImpl implements SchedulerClient {
                     .jobId(jobId)
                     .build();
         } catch (HttpStatusCodeException e) {
-            throwError(StringUtils.isBlank(e.getResponseBodyAsString()) ? e.getMessage() : e.getResponseBodyAsString(), "502001", jobId);
+            throwError(StringUtils.isBlank(e.getResponseBodyAsString()) ? e.getMessage() : e.getResponseBodyAsString(), "502009", jobId);
         } catch (Exception e) {
-            throwError(e.getMessage(), "502007", jobId);
+            throwError(e.getMessage(), "502010", jobId);
         }
         if (deletedJob == null) {
-            throwError("job couldn't be deleted", "502008", jobId);
+            throwError("job couldn't be deleted", "502011", jobId);
         }
         return deletedJob;
     }

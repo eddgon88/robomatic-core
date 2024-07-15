@@ -3,6 +3,7 @@ package com.robomatic.core.v1.mappers;
 import com.robomatic.core.v1.entities.TokenEntity;
 import com.robomatic.core.v1.entities.UserEntity;
 import com.robomatic.core.v1.enums.RoleEnum;
+import com.robomatic.core.v1.enums.TokenStatusEnum;
 import com.robomatic.core.v1.models.SingUpRequest;
 import com.robomatic.core.v1.utils.RobomaticStringUtils;
 import org.springframework.stereotype.Component;
@@ -26,12 +27,12 @@ public class AuthMapper {
     }
 
     public TokenEntity createTokenEntity(Integer userId) {
-        Date now = new Date();
         return TokenEntity.builder()
                 .token(RobomaticStringUtils.createRandomId(PREFIX))
-                .creationDate(now)
-                .expirationDate(RobomaticStringUtils.addHoursToDate(now, 24))
+                .creationDate(new Date())
+                .expirationDate(RobomaticStringUtils.addHoursToDate(new Date(), 24))
                 .userId(userId)
+                .status(TokenStatusEnum.OPEN.getCode())
                 .build();
     }
 
