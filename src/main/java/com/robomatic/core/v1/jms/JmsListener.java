@@ -4,10 +4,12 @@ import com.google.gson.FieldNamingPolicy;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.robomatic.core.v1.dtos.QueuesDto;
+import com.robomatic.core.v1.dtos.executor.ExecutorDto;
 import com.robomatic.core.v1.exceptions.InternalErrorException;
 import com.robomatic.core.v1.models.CreateCaseExecutionRequestModel;
 import com.robomatic.core.v1.models.UpdateTestExecutionRequestModel;
 import com.robomatic.core.v1.services.CreateCaseExecutionService;
+import com.robomatic.core.v1.services.ExecuteTestService;
 import com.robomatic.core.v1.services.UpdateTestExecutionService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.core.Message;
@@ -43,6 +45,10 @@ public class JmsListener {
     @Autowired
     private QueuesDto queuesDto;
 
+    @Autowired
+    private ExecuteTestService executeTestService;
+
+
     @RabbitListener(queues = "${queues.insertCaseExecution}")
     @RabbitHandler
     public void createCaseExecution(Message message) {
@@ -71,6 +77,23 @@ public class JmsListener {
                 return;
             }
             updateTestExecutionService.updateCaseExecution(this.gson.fromJson(body, UpdateTestExecutionRequestModel.class));
+        } catch (Exception e) {
+            log.error(e.getMessage());
+            throw new InternalErrorException(E500001);
+        }
+    }
+
+    @RabbitListener(queues = "${queues.scheduleTestExecution}")
+    @RabbitHandler
+    public void executeScheduledTest(Message message) {
+        log.info("Listening a message from activeMQ: {}", message);
+        try {
+            String body = validMessage(message);
+            if(body.equals(REDELIVERED_MESSAGE)) {
+                this.rabbitTemplate.send(queuesDto.getParkingLot(), message);
+                return;
+            }
+            executeTestService.executeDefaultTest(Integer.parseInt(body));
         } catch (Exception e) {
             log.error(e.getMessage());
             throw new InternalErrorException(E500001);

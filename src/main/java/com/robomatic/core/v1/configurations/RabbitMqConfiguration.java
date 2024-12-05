@@ -63,6 +63,11 @@ public class RabbitMqConfiguration {
         return new Queue(queuesDto.getUpdateTestExecution());
     }
 
+    @Bean
+    public Queue scheduleTestExecutionQueue() {
+        return new Queue(queuesDto.getScheduleTestExecution());
+    }
+
     //@Bean
     //public Queue stopTestExecutionQueue() {
     //    return new Queue(queuesDto.getStopTestExecution());
