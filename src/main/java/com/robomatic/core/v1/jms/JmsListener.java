@@ -8,6 +8,7 @@ import com.robomatic.core.v1.dtos.executor.ExecutorDto;
 import com.robomatic.core.v1.exceptions.InternalErrorException;
 import com.robomatic.core.v1.models.CreateCaseExecutionRequestModel;
 import com.robomatic.core.v1.models.UpdateTestExecutionRequestModel;
+import com.robomatic.core.v1.models.UserModel;
 import com.robomatic.core.v1.services.CreateCaseExecutionService;
 import com.robomatic.core.v1.services.ExecuteTestService;
 import com.robomatic.core.v1.services.UpdateTestExecutionService;
@@ -29,6 +30,8 @@ public class JmsListener {
 
     protected static final String REDELIVERED_MESSAGE = "redelivered message";
 
+    protected static final Integer ADMIN_ID = 1;
+
     private final Gson gson = new GsonBuilder()
             .setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES)
             .create();
@@ -47,6 +50,9 @@ public class JmsListener {
 
     @Autowired
     private ExecuteTestService executeTestService;
+
+    @Autowired
+    private UserModel user;
 
 
     @RabbitListener(queues = "${queues.insertCaseExecution}")
@@ -93,6 +99,7 @@ public class JmsListener {
                 this.rabbitTemplate.send(queuesDto.getParkingLot(), message);
                 return;
             }
+            user.setId(ADMIN_ID);
             executeTestService.executeDefaultTest(Integer.parseInt(body));
         } catch (Exception e) {
             log.error(e.getMessage());

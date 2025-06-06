@@ -84,6 +84,7 @@ public class AuthServiceImpl implements AuthService {
                         mailClient.sendMail(SendMailRequest.builder()
                                 .email(Collections.singletonList(user.get().getEmail()))
                                 .subject("Mail confirmation - Robomatic")
+                                .executionId("singup")
                                 .templateId(mailDto.getTemplateId())
                                 .bodyDict(bodyDict)
                                 .build());

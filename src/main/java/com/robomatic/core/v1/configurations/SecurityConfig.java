@@ -12,10 +12,9 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
-import org.springframework.security.web.csrf.CsrfTokenRepository;
 import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.Arrays;
 
@@ -24,30 +23,20 @@ import java.util.Arrays;
 public class SecurityConfig {
 
     private final JwtRequestFilter jwtRequestFilter;
-
     private final MyUserDetailService myUserDetailService;
 
-    public SecurityConfig(MyUserDetailService myUserDetailService,
-                          JwtRequestFilter jwtRequestFilter) {
+    public SecurityConfig(MyUserDetailService myUserDetailService, JwtRequestFilter jwtRequestFilter) {
         this.myUserDetailService = myUserDetailService;
         this.jwtRequestFilter = jwtRequestFilter;
     }
-
-    /*protected void configure(AuthenticationManagerBuilder auth) throws Exception {
-        auth.userDetailsService(username -> myUserDetailService
-                .findByUsername(username)
-                .orElseThrow(
-                        () -> new UsernameNotFoundException("User not found")
-                ));
-    }*/
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
-                .cors().and()
+                .cors(cors -> cors.configurationSource(corsConfigurationSource())) // Configuración explícita de CORS
                 .authorizeHttpRequests(authz -> authz
-                        .requestMatchers("/core/v1/auth/**").permitAll()  // Use requestMatchers instead of antMatchers
+                        .requestMatchers("/core/v1/auth/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session
@@ -59,21 +48,25 @@ public class SecurityConfig {
     }
 
     @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowedOrigins(Arrays.asList(
+                "http://localhost:4200",
+                "http://robomatic.cloud",
+                "https://robomatic.cloud"
+        ));
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(Arrays.asList("*"));
+        configuration.setExposedHeaders(Arrays.asList("Authorization"));
+        configuration.setAllowCredentials(true);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
+    }
+
+    @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
-
-    private CsrfTokenRepository csrfTokenRepository() {
-        return CookieCsrfTokenRepository.withHttpOnlyFalse();
-    }
-
-    /*protected void configure(HttpSecurity http) throws Exception {
-        http.csrf().disable().cors().and()
-                .authorizeRequests().antMatchers("/core/v1/auth/**").permitAll()
-                .anyRequest().authenticated()
-                .and().sessionManagement()
-                .sessionCreationPolicy(SessionCreationPolicy.STATELESS);
-        http.addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class);
-    }*/
-
 }

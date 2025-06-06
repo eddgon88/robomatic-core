@@ -16,6 +16,7 @@ public class SendMailRequest {
 
     private List<String> email;
     private String subject;
+    private String executionId;
     private String body;
     private Map<String,String> bodyDict;
     private String templateId;

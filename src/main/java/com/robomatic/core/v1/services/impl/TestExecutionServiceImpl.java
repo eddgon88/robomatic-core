@@ -7,6 +7,7 @@ import com.robomatic.core.v1.exceptions.NotFoundException;
 import com.robomatic.core.v1.exceptions.messages.NotFoundErrorCode;
 import com.robomatic.core.v1.models.ExecutionPort;
 import com.robomatic.core.v1.models.TestExecutionRecordModel;
+import com.robomatic.core.v1.models.UserModel;
 import com.robomatic.core.v1.repositories.ActionRelationalRepository;
 import com.robomatic.core.v1.repositories.TestExecutionRepository;
 import com.robomatic.core.v1.repositories.UserRepository;
@@ -16,6 +17,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 @Slf4j
@@ -53,6 +55,7 @@ public class TestExecutionServiceImpl implements TestExecutionService {
                         .user(actionEntity.getUserFrom().getFullName())
                         .build());
             });
+            ret.sort(Comparator.comparing(TestExecutionRecordModel::getDate, Comparator.reverseOrder()));
             return ret;
         } catch (Exception e) {
             log.error("Exception getting list of executions - {}", e.getMessage());

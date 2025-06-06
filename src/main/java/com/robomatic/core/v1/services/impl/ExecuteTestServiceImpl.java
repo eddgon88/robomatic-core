@@ -14,6 +14,7 @@ import com.robomatic.core.v1.exceptions.messages.NotFoundErrorCode;
 import com.robomatic.core.v1.jms.JmsSender;
 import com.robomatic.core.v1.mappers.TestExecutionMapper;
 import com.robomatic.core.v1.models.TestExecutionModel;
+import com.robomatic.core.v1.models.UserModel;
 import com.robomatic.core.v1.repositories.TestCaseRepository;
 import com.robomatic.core.v1.repositories.TestExecutionRepository;
 import com.robomatic.core.v1.repositories.TestRepository;
@@ -53,6 +54,9 @@ public class ExecuteTestServiceImpl implements ExecuteTestService {
     @Autowired
     private ActionService actionService;
 
+    @Autowired
+    private UserModel user;
+
     @Override
     public TestExecutionEntity executeTest(Integer testId, Integer testCaseId) {
 
@@ -66,9 +70,8 @@ public class ExecuteTestServiceImpl implements ExecuteTestService {
 
         TestExecutionEntity savedEntity = testExecutionRepository.save(testExecutionEntity);
 
-        actionService.createAction(1, null, ActionEnum.EXECUTE.getCode(), null, testId, testExecutionEntity.getId());
-
         try {
+            actionService.createAction(user.getId(), null, ActionEnum.EXECUTE.getCode(), null, testId, testExecutionEntity.getId());
             //jmsSender.sendQueue(queuesDto.getSendToExecute(), testExecutionModel);
             testExecutorClient.executeTest(testExecutionModel);
         } catch (Exception e) {
