@@ -14,12 +14,11 @@ import com.robomatic.core.v1.exceptions.messages.NotFoundErrorCode;
 import com.robomatic.core.v1.jms.JmsSender;
 import com.robomatic.core.v1.mappers.TestExecutionMapper;
 import com.robomatic.core.v1.models.TestExecutionModel;
-import com.robomatic.core.v1.models.UserModel;
 import com.robomatic.core.v1.repositories.TestCaseRepository;
 import com.robomatic.core.v1.repositories.TestExecutionRepository;
 import com.robomatic.core.v1.repositories.TestRepository;
 import com.robomatic.core.v1.services.ActionService;
-import com.robomatic.core.v1.services.ExecuteTestService;
+import com.robomatic.core.v1.services.JmsExecuteTestService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -28,7 +27,7 @@ import static com.robomatic.core.v1.exceptions.messages.NotFoundErrorCode.E40400
 
 @Slf4j
 @Service
-public class ExecuteTestServiceImpl implements ExecuteTestService {
+public class JmsExecuteTestServiceImpl implements JmsExecuteTestService {
 
     protected static final Integer ADMIN_ID = 1;
 
@@ -56,12 +55,8 @@ public class ExecuteTestServiceImpl implements ExecuteTestService {
     @Autowired
     private ActionService actionService;
 
-    @Autowired
-    private UserModel user;
-
     @Override
     public TestExecutionEntity executeTest(Integer testId, Integer testCaseId) {
-
         TestEntity testEntity = testRepository.findById(testId).orElseThrow(() -> new NotFoundException(NotFoundErrorCode.E404002));
 
         TestCaseEntity testCaseEntity = testCaseRepository.findById(testCaseId).orElseThrow(() -> new NotFoundException(E404001));
@@ -73,7 +68,7 @@ public class ExecuteTestServiceImpl implements ExecuteTestService {
         TestExecutionEntity savedEntity = testExecutionRepository.save(testExecutionEntity);
 
         try {
-            actionService.createAction(user == null ? ADMIN_ID : user.getId(), null, ActionEnum.EXECUTE.getCode(), null, testId, testExecutionEntity.getId());
+            actionService.createAction(ADMIN_ID, null, ActionEnum.EXECUTE.getCode(), null, testId, testExecutionEntity.getId());
             //jmsSender.sendQueue(queuesDto.getSendToExecute(), testExecutionModel);
             testExecutorClient.executeTest(testExecutionModel);
         } catch (Exception e) {
@@ -88,11 +83,9 @@ public class ExecuteTestServiceImpl implements ExecuteTestService {
 
     @Override
     public TestExecutionEntity executeDefaultTest(Integer testId) {
-
         TestCaseEntity testCaseEntity = testCaseRepository.getDefaultByTestId(testId)
                 .orElseThrow(() -> new NotFoundException(E404001));
 
         return executeTest(testId, testCaseEntity.getId());
-
     }
 }
