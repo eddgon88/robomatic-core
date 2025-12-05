@@ -37,4 +37,7 @@ public class UserEntity {
 
     private String pass;
 
+    @Column(name = "encrypted_pass", length = 60)
+    private String encryptedPass;
+
 }

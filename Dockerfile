@@ -1,5 +1,5 @@
 # crea el jar de la aplicacion en una imagen temporal
-FROM openjdk:17-alpine AS build
+FROM eclipse-temurin:17-jdk-jammy AS build
 
 RUN mkdir -p /app/src
 WORKDIR /app/src
@@ -8,7 +8,7 @@ COPY . /app/src
 RUN ./gradlew bootjar
 
 # crea una imagen ligera solo con el jar de spring boot
-FROM openjdk:17-alpine
+FROM eclipse-temurin:17-jre-jammy
 
 # Definir variables de entorno
 ENV DB_HOST=docker-postgresql
