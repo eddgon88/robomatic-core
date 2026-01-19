@@ -24,5 +24,6 @@ public class RecordModel {
     private LocalDateTime lastExecution;
     private String lastExecutionState;
     private Boolean isRunning;
+    private Boolean web;
 
 }

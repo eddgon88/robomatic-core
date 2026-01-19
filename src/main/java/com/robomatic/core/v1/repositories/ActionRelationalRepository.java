@@ -16,4 +16,11 @@ public interface ActionRelationalRepository extends JpaRepository<ActionRelation
     @Query(value = "SELECT a FROM ActionRelationalEntity a WHERE a.actionId = 4 AND a.testExecution.id = :testExecution")
     Optional<ActionRelationalEntity> findExecutionActionByTestExecution(@Param("testExecution") Integer testExecution);
 
+    /**
+     * Encuentra tests donde el usuario es owner (actionId = 1) o tiene permiso de edición (actionId = 7)
+     */
+    @Query(value = "SELECT DISTINCT a FROM ActionRelationalEntity a WHERE a.test IS NOT NULL AND " +
+            "((a.actionId = 1 AND a.userFrom.id = :userId) OR (a.actionId = 7 AND a.userTo.id = :userId))")
+    List<ActionRelationalEntity> findTestsWithOwnerOrEditPermission(@Param("userId") Integer userId);
+
 }

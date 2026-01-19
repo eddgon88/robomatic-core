@@ -11,7 +11,9 @@ public enum NotFoundErrorCode {
     E404008("404008", "User not found."),
     E404009("404009", "Transaction status not found."),
     E404010("404010", "Transaction not found."),
-    E404011("404011", "No transaction was found");
+    E404011("404011", "No transaction was found"),
+    E404012("404012", "Credential not found."),
+    E404013("404013", "Schedule not found.");
 
     private String code;
     private String message;

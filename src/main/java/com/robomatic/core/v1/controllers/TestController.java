@@ -81,6 +81,15 @@ public class TestController {
         return functionCaller.callFunction(folderId, function, HttpStatus.OK);
     }
 
+    /**
+     * Obtiene los tests a los que el usuario tiene permisos de owner o editor.
+     * Usado para el selector del scheduler.
+     */
+    @GetMapping(path = "/schedulable", produces = APPLICATION_JSON_VALUE)
+    public ResponseEntity<Object> getSchedulableTests() {
+        return new ResponseEntity<>(getTestService.getTestsForScheduler(), HttpStatus.OK);
+    }
+
     @PostMapping(path = "/stop/{testId}", produces = APPLICATION_JSON_VALUE)
     public ResponseEntity<Object> stopTestExecution(@PathVariable("testId") Integer testId) {
         UnaryOperator<Object> function = req -> stopTestExecutionService.stopTestExecution((Integer) req);

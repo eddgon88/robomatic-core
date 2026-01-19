@@ -27,7 +27,7 @@ public class AuthMapper {
                 .fullName(singUpRequest.getFistName() + " " + singUpRequest.getLastName())
                 .encryptedPass(passwordEncryptionService.encryptPassword(singUpRequest.getPass()))
                 .phone(singUpRequest.getPhone())
-                .roleId(RoleEnum.ANALYST.getCode())
+                .roleId(RoleEnum.VIEWER.getCode())
                 .build();
     }
 
@@ -36,6 +36,19 @@ public class AuthMapper {
                 .token(RobomaticStringUtils.createRandomId(PREFIX))
                 .creationDate(new Date())
                 .expirationDate(RobomaticStringUtils.addHoursToDate(new Date(), 24))
+                .userId(userId)
+                .status(TokenStatusEnum.OPEN.getCode())
+                .build();
+    }
+
+    /**
+     * Crea un token para recuperación de contraseña (expira en 1 hora)
+     */
+    public TokenEntity createPasswordResetToken(Integer userId) {
+        return TokenEntity.builder()
+                .token(RobomaticStringUtils.createRandomId("RST"))
+                .creationDate(new Date())
+                .expirationDate(RobomaticStringUtils.addHoursToDate(new Date(), 1)) // 1 hora
                 .userId(userId)
                 .status(TokenStatusEnum.OPEN.getCode())
                 .build();

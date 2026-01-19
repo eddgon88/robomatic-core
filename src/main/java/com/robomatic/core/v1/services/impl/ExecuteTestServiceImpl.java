@@ -13,6 +13,7 @@ import com.robomatic.core.v1.exceptions.messages.InternalErrorCode;
 import com.robomatic.core.v1.exceptions.messages.NotFoundErrorCode;
 import com.robomatic.core.v1.jms.JmsSender;
 import com.robomatic.core.v1.mappers.TestExecutionMapper;
+import com.robomatic.core.v1.models.CredentialExecutionModel;
 import com.robomatic.core.v1.models.TestExecutionModel;
 import com.robomatic.core.v1.models.UserModel;
 import com.robomatic.core.v1.repositories.TestCaseRepository;
@@ -20,9 +21,12 @@ import com.robomatic.core.v1.repositories.TestExecutionRepository;
 import com.robomatic.core.v1.repositories.TestRepository;
 import com.robomatic.core.v1.services.ActionService;
 import com.robomatic.core.v1.services.ExecuteTestService;
+import com.robomatic.core.v1.services.TestCredentialService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 import static com.robomatic.core.v1.exceptions.messages.NotFoundErrorCode.E404001;
 
@@ -57,6 +61,9 @@ public class ExecuteTestServiceImpl implements ExecuteTestService {
     private ActionService actionService;
 
     @Autowired
+    private TestCredentialService credentialService;
+
+    @Autowired
     private UserModel user;
 
     @Override
@@ -68,10 +75,20 @@ public class ExecuteTestServiceImpl implements ExecuteTestService {
 
         TestExecutionEntity testExecutionEntity = testExecutionMapper.createTestExecutionEntity(testId);
 
-        TestExecutionModel testExecutionModel = testExecutionMapper.createTestExecutionModel(testEntity, testCaseEntity.getFileDir(), testExecutionEntity.getTestExecutionId());
+        // Obtener credenciales para la ejecución
+        List<CredentialExecutionModel> credentials = credentialService.getCredentialsForExecution(testId);
+        log.info("Credentials for test {}: count={}, names={}", testId, credentials.size(), 
+                credentials.stream().map(CredentialExecutionModel::getName).toList());
+
+        TestExecutionModel testExecutionModel = testExecutionMapper.createTestExecutionModel(
+                testEntity, 
+                testCaseEntity.getFileDir(), 
+                testExecutionEntity.getTestExecutionId(),
+                credentials
+        );
 
         TestExecutionEntity savedEntity = testExecutionRepository.save(testExecutionEntity);
-
+        
         try {
             actionService.createAction(user == null ? ADMIN_ID : user.getId(), null, ActionEnum.EXECUTE.getCode(), null, testId, testExecutionEntity.getId());
             //jmsSender.sendQueue(queuesDto.getSendToExecute(), testExecutionModel);

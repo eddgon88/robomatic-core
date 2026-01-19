@@ -13,5 +13,6 @@ public class Endpoint {
 
     private String sendMail;
     private String confirm;
+    private String resetPassword;
 
 }

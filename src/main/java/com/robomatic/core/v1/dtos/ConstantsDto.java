@@ -19,5 +19,7 @@ public class ConstantsDto {
     private String testCaseTerminal;
     private String testExecutionPrefix;
     private String caseExecutionPrefix;
+    private String credentialPrefix;
+    private String credentialFileDir;
 
 }

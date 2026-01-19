@@ -5,6 +5,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 @Data
 @Builder
 @NoArgsConstructor
@@ -19,5 +21,6 @@ public class TestExecutionModel {
     private String name;
     private String testExecutionId;
     private boolean web;
+    private List<CredentialExecutionModel> credentials;
 
 }

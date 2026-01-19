@@ -5,6 +5,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.Map;
+
 @Data
 @Builder
 @NoArgsConstructor
@@ -13,8 +15,10 @@ public class JobModel {
 
     private String jobId;
     private String triggerType;
-    private String expression;
+    private Map<String, Object> expression;
     private String queue;
     private String message;
+    private String nextRunTime;
+    private String trigger;
 
 }

@@ -3,6 +3,8 @@ package com.robomatic.core.v1.controllers;
 import com.robomatic.core.v1.commons.FunctionCaller;
 import com.robomatic.core.v1.entities.UserEntity;
 import com.robomatic.core.v1.models.AuthRequest;
+import com.robomatic.core.v1.models.ForgotPasswordRequest;
+import com.robomatic.core.v1.models.ResetPasswordRequest;
 import com.robomatic.core.v1.models.SingUpRequest;
 import com.robomatic.core.v1.repositories.UserRepository;
 import com.robomatic.core.v1.services.AuthService;
@@ -86,6 +88,36 @@ public class AuthController {
     public ResponseEntity<Object> confirmUser(@PathVariable("token") String token) {
         UnaryOperator<Object> function = req -> authService.confirmUser((String) req);
         return functionCaller.callFunction(token, function, HttpStatus.OK);
+    }
+
+    /**
+     * Solicita recuperación de contraseña - envía email con link
+     */
+    @PostMapping("/forgot-password")
+    public ResponseEntity<Object> forgotPassword(@RequestBody @Valid ForgotPasswordRequest request) {
+        log.info("Password recovery requested for: {}", request.getEmail());
+        UnaryOperator<Object> function = req -> authService.forgotPassword((ForgotPasswordRequest) req);
+        return functionCaller.callFunction(request, function, HttpStatus.OK);
+    }
+
+    /**
+     * Valida si el token de recuperación es válido
+     */
+    @GetMapping("/validate-reset-token/{token}")
+    public ResponseEntity<Object> validateResetToken(@PathVariable("token") String token) {
+        log.info("Validating reset token");
+        UnaryOperator<Object> function = req -> authService.validateResetToken((String) req);
+        return functionCaller.callFunction(token, function, HttpStatus.OK);
+    }
+
+    /**
+     * Establece la nueva contraseña usando el token de recuperación
+     */
+    @PostMapping("/reset-password")
+    public ResponseEntity<Object> resetPassword(@RequestBody @Valid ResetPasswordRequest request) {
+        log.info("Password reset attempt");
+        UnaryOperator<Object> function = req -> authService.resetPassword((ResetPasswordRequest) req);
+        return functionCaller.callFunction(request, function, HttpStatus.OK);
     }
 
 }

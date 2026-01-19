@@ -71,6 +71,7 @@ public class TestMapper {
                 .name(testEntity.getName())
                 .permissions(permission)
                 .user(name)
+                .web(testEntity.isWeb())
                 .build();
     }
 
@@ -85,6 +86,7 @@ public class TestMapper {
                 .user(action.getUserFrom().getFullName())
                 .lastUpdate(action.getDate())
                 .isRunning(isRunning)
+                .web(testEntity.isWeb())
                 .build();
     }
 
@@ -95,6 +97,17 @@ public class TestMapper {
                 .type("folder")
                 .folderId(folderEntity.getFolderId())
                 .name(folderEntity.getName())
+                .build();
+    }
+
+    public RecordModel folderToRecord(FolderEntity folderEntity, String permission, String userName) {
+        return RecordModel.builder()
+                .id(folderEntity.getId())
+                .type("folder")
+                .folderId(folderEntity.getFolderId())
+                .name(folderEntity.getName())
+                .permissions(permission)
+                .user(userName)
                 .build();
     }
 

@@ -10,6 +10,7 @@ import com.robomatic.core.v1.exceptions.messages.NotFoundErrorCode;
 import com.robomatic.core.v1.mappers.TestMapper;
 import com.robomatic.core.v1.models.CreateFolderRequestModel;
 import com.robomatic.core.v1.models.RecordModel;
+import com.robomatic.core.v1.models.UserModel;
 import com.robomatic.core.v1.repositories.FolderRepository;
 import com.robomatic.core.v1.services.ActionService;
 import com.robomatic.core.v1.services.FolderService;
@@ -30,6 +31,9 @@ public class FolderServiceImpl implements FolderService {
     @Autowired
     ActionService actionService;
 
+    @Autowired
+    private UserModel currentUser;
+
     @Override
     public RecordModel createFolder(CreateFolderRequestModel createFolderRequestModel) {
         try {
@@ -37,8 +41,9 @@ public class FolderServiceImpl implements FolderService {
                     .folderId(createFolderRequestModel.getFolderId())
                     .name(createFolderRequestModel.getName())
                     .build());
-            actionService.createAction(1, null, ActionEnum.CREATE.getCode(), folder.getId(), null, null);
-            return testMapper.folderToRecord(folder);
+            actionService.createAction(currentUser.getId(), null, ActionEnum.CREATE.getCode(), folder.getId(), null, null);
+            // Devolver con permisos de owner para que los botones aparezcan inmediatamente
+            return testMapper.folderToRecord(folder, PermissionsEnum.OWNER.getValue(), currentUser.getFullName());
         } catch (Exception e) {
             log.error("Error crating folder: {}", e.getMessage());
             throw new BadRequestException(BadRequestErrorCode.E400002);

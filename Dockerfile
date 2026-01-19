@@ -1,11 +1,10 @@
 # crea el jar de la aplicacion en una imagen temporal
-FROM eclipse-temurin:17-jdk-jammy AS build
+FROM gradle:7.6.4-jdk17 AS build
 
-RUN mkdir -p /app/src
 WORKDIR /app/src
 COPY . /app/src
 
-RUN ./gradlew bootjar
+RUN gradle bootjar --no-daemon
 
 # crea una imagen ligera solo con el jar de spring boot
 FROM eclipse-temurin:17-jre-jammy

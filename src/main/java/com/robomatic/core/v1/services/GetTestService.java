@@ -12,4 +12,10 @@ public interface GetTestService {
 
     TestModel getTest(Integer testId) throws IOException;
 
+    /**
+     * Obtiene los tests a los que el usuario tiene permisos de owner o editor.
+     * Usado para el selector del scheduler.
+     */
+    List<RecordModel> getTestsForScheduler();
+
 }

@@ -113,8 +113,37 @@ public class GetTestServiceImpl implements GetTestService {
                 records.add(testMapper.testAndActionToRecord(t, action, PermissionsEnum.VIEW.getValue(), isRunning));
         });
         getLastExecution(records);
+        
+        // Procesar folders con sus permisos
         folders.stream().filter(f -> !f.getId().equals(0) && f.getFolderId().equals(folderId))
-                .forEach(f -> records.add(testMapper.folderToRecord(f)));
+                .forEach(f -> {
+                    ActionRelationalEntity action = actions.stream()
+                            .filter(a -> a.getFolder() != null && a.getFolder().getId().equals(f.getId()))
+                            .findFirst().orElse(null);
+                    
+                    if (action != null) {
+                        String permission;
+                        String userName = action.getUserFrom().getFullName();
+                        
+                        // Determinar el permiso basado en el actionId
+                        if (action.getActionId().equals(ActionEnum.CREATE.getCode())) {
+                            permission = PermissionsEnum.OWNER.getValue();
+                        } else if (action.getActionId().equals(ActionEnum.EDIT_PERMISSION.getCode())) {
+                            permission = PermissionsEnum.EDIT.getValue();
+                        } else if (action.getActionId().equals(ActionEnum.EXECUTE_PERMISSION.getCode())) {
+                            permission = PermissionsEnum.EXECUTE.getValue();
+                        } else if (action.getActionId().equals(ActionEnum.VIEW_PERMISSION.getCode())) {
+                            permission = PermissionsEnum.VIEW.getValue();
+                        } else {
+                            permission = PermissionsEnum.VIEW.getValue(); // Default
+                        }
+                        
+                        records.add(testMapper.folderToRecord(f, permission, userName));
+                    } else {
+                        // Fallback: usar el método sin permisos (legacy)
+                        records.add(testMapper.folderToRecord(f));
+                    }
+                });
     }
 
     private Boolean checkIsRunning(Integer testId) {
@@ -140,10 +169,54 @@ public class GetTestServiceImpl implements GetTestService {
                 .orElseThrow(() -> new NotFoundException(E404001));
         TestModel test = testMapper.getTestModel(testEntity, testCaseEntity);
         test.setTestCases(getTestCases(testCaseEntity.getFileDir()));
-        //configurar el usuario cuando se aplique la seguridad JWT
-        test.setPermissions(PermissionsEnum.OWNER.getValue());
+        
+        test.setPermissions(getUserPermissionOnTest(testId));
 
         return test;
+    }
+
+    /**
+     * Determina el permiso que tiene el usuario actual sobre un test específico.
+     * 
+     * Prioridad de permisos:
+     * 1. Owner (creador del test)
+     * 2. Edit permission
+     * 3. Execute permission
+     * 4. View permission
+     */
+    private String getUserPermissionOnTest(Integer testId) {
+        Integer userId = user.getId();
+        
+        // Buscar la acción relacionada al usuario para este test
+        List<ActionRelationalEntity> actions = actionRelationalRepository.findActionsByUser(userId);
+        
+        for (ActionRelationalEntity action : actions) {
+            if (action.getTest() != null && action.getTest().getId().equals(testId)) {
+                // Es el creador (owner)
+                if (action.getActionId().equals(ActionEnum.CREATE.getCode()) && 
+                    action.getUserFrom().getId().equals(userId)) {
+                    return PermissionsEnum.OWNER.getValue();
+                }
+                // Tiene permiso de edición
+                if (action.getActionId().equals(ActionEnum.EDIT_PERMISSION.getCode()) && 
+                    action.getUserTo() != null && action.getUserTo().getId().equals(userId)) {
+                    return PermissionsEnum.EDIT.getValue();
+                }
+                // Tiene permiso de ejecución
+                if (action.getActionId().equals(ActionEnum.EXECUTE_PERMISSION.getCode()) && 
+                    action.getUserTo() != null && action.getUserTo().getId().equals(userId)) {
+                    return PermissionsEnum.EXECUTE.getValue();
+                }
+                // Tiene permiso de visualización
+                if (action.getActionId().equals(ActionEnum.VIEW_PERMISSION.getCode()) && 
+                    action.getUserTo() != null && action.getUserTo().getId().equals(userId)) {
+                    return PermissionsEnum.VIEW.getValue();
+                }
+            }
+        }
+        
+        // Default: view (aunque no debería llegar aquí si tiene acceso)
+        return PermissionsEnum.VIEW.getValue();
     }
 
     private String getTestCases(String testCaseDir) {
@@ -155,6 +228,33 @@ public class GetTestServiceImpl implements GetTestService {
         }
         byte[] encodedBytes = Base64.getEncoder().encode(resultStringBuilder.toString().getBytes(StandardCharsets.UTF_8));
         return new String(encodedBytes);
+    }
+
+    @Override
+    public List<RecordModel> getTestsForScheduler() {
+        List<RecordModel> records = new java.util.ArrayList<>();
+        
+        // Obtener acciones donde el usuario es owner o tiene permiso de edición
+        List<ActionRelationalEntity> actions = actionRelationalRepository.findTestsWithOwnerOrEditPermission(user.getId());
+        
+        // Usar un Set para evitar duplicados (un usuario podría tener múltiples permisos sobre el mismo test)
+        java.util.Set<Integer> processedTestIds = new java.util.HashSet<>();
+        
+        for (ActionRelationalEntity action : actions) {
+            if (action.getTest() != null && !processedTestIds.contains(action.getTest().getId())) {
+                TestEntity test = action.getTest();
+                processedTestIds.add(test.getId());
+                
+                String permission = action.getActionId().equals(ActionEnum.CREATE.getCode()) 
+                    ? PermissionsEnum.OWNER.getValue() 
+                    : PermissionsEnum.EDIT.getValue();
+                
+                Boolean isRunning = checkIsRunning(test.getId());
+                records.add(testMapper.testAndActionToRecord(test, action, permission, isRunning));
+            }
+        }
+        
+        return records;
     }
 
 }

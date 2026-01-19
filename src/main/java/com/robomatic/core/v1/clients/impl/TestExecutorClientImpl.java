@@ -47,7 +47,8 @@ public class TestExecutorClientImpl implements TestExecutorClient {
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
 
-            HttpEntity<TestExecutionModel> httpEntity = new HttpEntity<>(testExecutionModel, headers);
+            // Usar el JSON serializado con Gson (snake_case) en lugar del objeto
+            HttpEntity<String> httpEntity = new HttpEntity<>(json, headers);
 
             restTemplate.postForEntity(url, httpEntity, String.class);
         } catch (HttpStatusCodeException e) {

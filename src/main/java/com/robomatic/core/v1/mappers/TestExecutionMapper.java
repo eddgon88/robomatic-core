@@ -4,10 +4,13 @@ import com.robomatic.core.v1.dtos.ConstantsDto;
 import com.robomatic.core.v1.entities.TestEntity;
 import com.robomatic.core.v1.entities.TestExecutionEntity;
 import com.robomatic.core.v1.enums.StatusEnum;
+import com.robomatic.core.v1.models.CredentialExecutionModel;
 import com.robomatic.core.v1.models.TestExecutionModel;
 import com.robomatic.core.v1.utils.RobomaticStringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+
+import java.util.List;
 
 @Component
 public class TestExecutionMapper {
@@ -15,7 +18,8 @@ public class TestExecutionMapper {
     @Autowired
     private ConstantsDto constantsDto;
 
-    public TestExecutionModel createTestExecutionModel(TestEntity testEntity, String testCaseFileDir, String testExecutionId) {
+    public TestExecutionModel createTestExecutionModel(TestEntity testEntity, String testCaseFileDir, 
+            String testExecutionId, List<CredentialExecutionModel> credentials) {
 
         return TestExecutionModel.builder()
                 .script(testEntity.getScript())
@@ -26,6 +30,7 @@ public class TestExecutionMapper {
                 .name(testEntity.getName())
                 .testExecutionId(testExecutionId)
                 .web(testEntity.isWeb())
+                .credentials(credentials)
                 .build();
 
     }

@@ -2,6 +2,7 @@ package com.robomatic.core.v1.exceptions.messages;
 
 public enum BadRequestErrorCode {
 
+    E400001("400001", "Invalid permission type."),
     E400002("400002", "Conflicts creating folder."),
     E400003("400003", "Conflicts creating order."),
     E400004("400004", "Merchant-method customs values not found."),
@@ -22,7 +23,11 @@ public enum BadRequestErrorCode {
     E400019("400019", "The tarjetas_quotas_allowed custom is invalid."),
     E400020("400020", "Rut is missing"),
     E400021("400021", "Type is missing"),
-    E400022("400022", "statusEnrolledMastercardConnect is missing");
+    E400022("400022", "statusEnrolledMastercardConnect is missing"),
+    E400023("400023", "A schedule already exists for this test."),
+    E400024("400024", "Invalid trigger type. Must be: cron, interval, or date."),
+    E400025("400025", "Invalid schedule expression."),
+    E400026("400026", "You don't have permission to manage schedules for this test.");
 
     private final String code;
     private final String message;

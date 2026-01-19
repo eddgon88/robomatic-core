@@ -37,111 +37,158 @@ public class SchedulerClientImpl implements SchedulerClient {
 
     @Override
     public JobCreatedModel createJob(final JobModel job) {
-
-        JobCreatedModel resp = null;
-
-        String url = StringUtils.join(schedulerDto.getBaseUrl(), schedulerDto.getEndpoint().getCreateJob());
-
-        String json = gson.toJson(job);
-        log.info("Calling SCHEDULER API. Url: {}, req: {}", url, json);
+        String url = buildUrl(schedulerDto.getEndpoint().getCreateJob());
+        String jsonBody = gson.toJson(job);
+        
+        log.info("Calling SCHEDULER API [CREATE]. Url: {}, body: {}", url, jsonBody);
 
         try {
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
-
-            HttpEntity<JobModel> httpEntity = new HttpEntity<>(job, headers);
-
-            ResponseEntity<String> responseEntity = restTemplate.postForEntity(url, httpEntity, String.class);
-            resp = gson.fromJson(responseEntity.getBody(), JobCreatedModel.class);
+            
+            // Usar JSON string para asegurar snake_case (Gson) en lugar de JobModel (Jackson)
+            HttpEntity<String> httpEntity = new HttpEntity<>(jsonBody, headers);
+            ResponseEntity<String> response = restTemplate.postForEntity(url, httpEntity, String.class);
+            
+            JobCreatedModel result = gson.fromJson(response.getBody(), JobCreatedModel.class);
+            if (result == null) {
+                throw new BadGatewayException("502002", "Job couldn't be created - empty response");
+            }
+            
+            log.info("Job created successfully: {}", job.getJobId());
+            return result;
+            
         } catch (HttpStatusCodeException e) {
-            throwError(StringUtils.isBlank(e.getResponseBodyAsString()) ? e.getMessage() : e.getResponseBodyAsString(), "502000", job.getJobId());
+            String errorMsg = StringUtils.defaultIfBlank(e.getResponseBodyAsString(), e.getMessage());
+            logAndThrow("CREATE", errorMsg, "502000", job.getJobId());
+        } catch (BadGatewayException e) {
+            throw e;
         } catch (Exception e) {
-            throwError(e.getMessage(), "502001", job.getJobId());
+            logAndThrow("CREATE", e.getMessage(), "502001", job.getJobId());
         }
-        if (resp == null) {
-            throwError("job couldn't be created.", "502002", job.getJobId());
-        }
-
-        return resp;
-
-    }
-
-    private void throwError(String messageError, String codeError, String referenceId) {
-        String error = LogUtils.formatObjectToJson("Send Schedule", String.format("API Error: %s", messageError), referenceId);
-        log.error(error);
-        throw new BadGatewayException(codeError, messageError);
+        
+        return null; // Nunca llega aquí
     }
 
     @Override
     public JobModel getJobById(String jobId) {
-
-        JobModel job = null;
-
-        String url = StringUtils.join(schedulerDto.getBaseUrl(), schedulerDto.getEndpoint()
-                .getGetJob().replace("##jobId##", jobId));
-
-        log.info("Calling SCHEDULER API. Url: {}, job: {}", url, jobId);
+        String url = buildUrl(schedulerDto.getEndpoint().getGetJob(), jobId);
+        
+        log.info("Calling SCHEDULER API [GET]. Url: {}", url);
 
         try {
-            ResponseEntity<String> responseEntity = restTemplate.getForEntity(url, String.class);
-            job = gson.fromJson(responseEntity.getBody(), JobModel.class);
+            ResponseEntity<String> response = restTemplate.getForEntity(url, String.class);
+            JobModel job = gson.fromJson(response.getBody(), JobModel.class);
+            
+            // Verificar si el scheduler retornó "Job not found"
+            if (job == null || job.getJobId() == null) {
+                String body = response.getBody();
+                if (body != null && body.contains("not found")) {
+                    throw new BadGatewayException("502012", "Job not found: " + jobId);
+                }
+                throw new BadGatewayException("502005", "Job couldn't be reached - invalid response");
+            }
+            
+            return job;
+            
         } catch (HttpStatusCodeException e) {
-            throwError(StringUtils.isBlank(e.getResponseBodyAsString()) ? e.getMessage() : e.getResponseBodyAsString(), "502003", jobId);
+            String errorMsg = StringUtils.defaultIfBlank(e.getResponseBodyAsString(), e.getMessage());
+            logAndThrow("GET", errorMsg, "502003", jobId);
+        } catch (BadGatewayException e) {
+            throw e;
         } catch (Exception e) {
-            throwError(e.getMessage(), "502004", jobId);
+            logAndThrow("GET", e.getMessage(), "502004", jobId);
         }
-        if (job == null) {
-            throwError("job couldn't be reached", "502005", jobId);
-        }
-        return job;
+        
+        return null; // Nunca llega aquí
     }
 
     @Override
     public JobListModel getJobs() {
-        JobListModel jobs = null;
-
-        String url = StringUtils.join(schedulerDto.getBaseUrl(), schedulerDto.getEndpoint()
-                .getGetJobs());
-
-        log.info("Calling SCHEDULER API. Url: {}", url);
+        String url = buildUrl(schedulerDto.getEndpoint().getGetJobs());
+        
+        log.info("Calling SCHEDULER API [GET ALL]. Url: {}", url);
 
         try {
-            ResponseEntity<String> responseEntity = restTemplate.getForEntity(url, String.class);
-            jobs = gson.fromJson(responseEntity.getBody(), JobListModel.class);
+            ResponseEntity<String> response = restTemplate.getForEntity(url, String.class);
+            JobListModel jobs = gson.fromJson(response.getBody(), JobListModel.class);
+            
+            if (jobs == null) {
+                throw new BadGatewayException("502008", "Jobs couldn't be reached - empty response");
+            }
+            
+            return jobs;
+            
         } catch (HttpStatusCodeException e) {
-            throwError(StringUtils.isBlank(e.getResponseBodyAsString()) ? e.getMessage() : e.getResponseBodyAsString(), "502006", url);
+            String errorMsg = StringUtils.defaultIfBlank(e.getResponseBodyAsString(), e.getMessage());
+            logAndThrow("GET ALL", errorMsg, "502006", url);
+        } catch (BadGatewayException e) {
+            throw e;
         } catch (Exception e) {
-            throwError(e.getMessage(), "502007", url);
+            logAndThrow("GET ALL", e.getMessage(), "502007", url);
         }
-        if (jobs == null) {
-            throwError("jobs couldn't be reached", "502008", url);
-        }
-        return jobs;
+        
+        return null; // Nunca llega aquí
     }
 
     @Override
     public JobCreatedModel deleteJob(String jobId) {
-        JobCreatedModel deletedJob = null;
-
-        String url = StringUtils.join(schedulerDto.getBaseUrl(), schedulerDto.getEndpoint()
-                .getGetJob().replace("##jobId##", jobId));
-
-        log.info("Calling SCHEDULER API. Url: {}", url);
+        // FIX: Usar getDeleteJob() en lugar de getGetJob()
+        String url = buildUrl(schedulerDto.getEndpoint().getDeleteJob(), jobId);
+        
+        log.info("Calling SCHEDULER API [DELETE]. Url: {}", url);
 
         try {
-            restTemplate.delete(url, String.class);
-            deletedJob = JobCreatedModel.builder()
+            restTemplate.delete(url);
+            
+            log.info("Job deleted successfully: {}", jobId);
+            return JobCreatedModel.builder()
                     .scheduled(false)
                     .jobId(jobId)
                     .build();
+                    
         } catch (HttpStatusCodeException e) {
-            throwError(StringUtils.isBlank(e.getResponseBodyAsString()) ? e.getMessage() : e.getResponseBodyAsString(), "502009", jobId);
+            String errorMsg = StringUtils.defaultIfBlank(e.getResponseBodyAsString(), e.getMessage());
+            // Si el job no existe, no es un error crítico para delete
+            if (e.getStatusCode().value() == 404 || errorMsg.contains("not found")) {
+                log.warn("Job {} not found in scheduler, may have been already deleted", jobId);
+                return JobCreatedModel.builder()
+                        .scheduled(false)
+                        .jobId(jobId)
+                        .build();
+            }
+            logAndThrow("DELETE", errorMsg, "502009", jobId);
         } catch (Exception e) {
-            throwError(e.getMessage(), "502010", jobId);
+            logAndThrow("DELETE", e.getMessage(), "502010", jobId);
         }
-        if (deletedJob == null) {
-            throwError("job couldn't be deleted", "502011", jobId);
-        }
-        return deletedJob;
+        
+        return null; // Nunca llega aquí
+    }
+
+    /**
+     * Construye la URL completa para el endpoint
+     */
+    private String buildUrl(String endpoint) {
+        return StringUtils.join(schedulerDto.getBaseUrl(), endpoint);
+    }
+
+    /**
+     * Construye la URL reemplazando el placeholder del jobId
+     */
+    private String buildUrl(String endpoint, String jobId) {
+        return StringUtils.join(schedulerDto.getBaseUrl(), endpoint.replace("##jobId##", jobId));
+    }
+
+    /**
+     * Log del error y lanza excepción
+     */
+    private void logAndThrow(String operation, String message, String code, String reference) {
+        String error = LogUtils.formatObjectToJson(
+                String.format("Scheduler API [%s]", operation),
+                String.format("Error: %s", message),
+                reference
+        );
+        log.error(error);
+        throw new BadGatewayException(code, message);
     }
 }
