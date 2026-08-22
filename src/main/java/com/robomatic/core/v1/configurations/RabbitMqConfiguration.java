@@ -45,31 +45,22 @@ public class RabbitMqConfiguration {
 
     @Bean
     public ConnectionFactory connectionFactory() {
-        // --- NUEVA CONFIGURACION: CLOUDAMQP SSL URI ---
+        // --- CONFIGURACION CLOUDAMQP SSL (AMQPS URI) ---
         if (rabbitmqAddresses != null && !rabbitmqAddresses.trim().isEmpty()) {
             try {
-                logger.info("Configuring RabbitMQ ConnectionFactory with CloudAMQP URI: {}", rabbitmqAddresses);
-                URI uri = URI.create(rabbitmqAddresses.trim());
-                CachingConnectionFactory connectionFactory = new CachingConnectionFactory();
-                connectionFactory.setHost(uri.getHost());
-                int port = uri.getPort() > 0 ? uri.getPort() : ("amqps".equalsIgnoreCase(uri.getScheme()) ? 5671 : 5672);
-                connectionFactory.setPort(port);
+                String cleanedUri = rabbitmqAddresses.trim().replaceAll("^[\"']|[\"']$", "");
+                String maskedUri = cleanedUri.replaceAll(":[^:@]+@", ":****@");
+                logger.info("Configuring RabbitMQ ConnectionFactory with CloudAMQP URI: {}", maskedUri);
 
-                if (uri.getUserInfo() != null) {
-                    String[] credentials = uri.getUserInfo().split(":", 2);
-                    connectionFactory.setUsername(credentials[0]);
-                    if (credentials.length > 1) {
-                        connectionFactory.setPassword(credentials[1]);
-                    }
-                }
-                if (uri.getPath() != null && uri.getPath().length() > 1) {
-                    connectionFactory.setVirtualHost(uri.getPath().substring(1));
-                }
-                if ("amqps".equalsIgnoreCase(uri.getScheme())) {
-                    connectionFactory.getRabbitConnectionFactory().useSslProtocol();
-                }
-                logger.info("RabbitMQ successfully configured -> host: {}, port: {}, virtualHost: {}, ssl: {}",
-                        connectionFactory.getHost(), connectionFactory.getPort(), connectionFactory.getVirtualHost(), "amqps".equalsIgnoreCase(uri.getScheme()));
+                com.rabbitmq.client.ConnectionFactory rabbitFactory = new com.rabbitmq.client.ConnectionFactory();
+                rabbitFactory.setUri(URI.create(cleanedUri));
+                rabbitFactory.enableHostnameVerification();
+                rabbitFactory.setAutomaticRecoveryEnabled(true);
+                rabbitFactory.setNetworkRecoveryInterval(10000);
+
+                CachingConnectionFactory connectionFactory = new CachingConnectionFactory(rabbitFactory);
+                logger.info("RabbitMQ ConnectionFactory initialized successfully for host: {}, port: {}, vhost: {}",
+                        rabbitFactory.getHost(), rabbitFactory.getPort(), rabbitFactory.getVirtualHost());
                 return connectionFactory;
             } catch (Exception e) {
                 logger.error("Error setting up CloudAMQP URI ConnectionFactory: {}", e.getMessage(), e);
