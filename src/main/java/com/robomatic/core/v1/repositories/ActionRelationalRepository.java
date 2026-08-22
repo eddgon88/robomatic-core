@@ -23,4 +23,17 @@ public interface ActionRelationalRepository extends JpaRepository<ActionRelation
             "((a.actionId = 1 AND a.userFrom.id = :userId) OR (a.actionId = 7 AND a.userTo.id = :userId))")
     List<ActionRelationalEntity> findTestsWithOwnerOrEditPermission(@Param("userId") Integer userId);
 
+    /**
+     * Encuentra tests donde el usuario tiene permisos de owner (1), editor (7) o ejecutor (5)
+     */
+    @Query(value = "SELECT DISTINCT a FROM ActionRelationalEntity a WHERE a.test IS NOT NULL AND " +
+            "((a.actionId = 1 AND a.userFrom.id = :userId) OR (a.actionId IN (7, 5) AND a.userTo.id = :userId))")
+    List<ActionRelationalEntity> findTestsWithSchedulablePermission(@Param("userId") Integer userId);
+
+    @Query(value = "SELECT a FROM ActionRelationalEntity a WHERE a.test.id = :testId AND a.actionId IN (5, 6, 7)")
+    List<ActionRelationalEntity> findPermissionsByTestId(@Param("testId") Integer testId);
+
+    @Query(value = "SELECT a FROM ActionRelationalEntity a WHERE a.folder.id = :folderId AND a.actionId IN (5, 6, 7)")
+    List<ActionRelationalEntity> findPermissionsByFolderId(@Param("folderId") Integer folderId);
+
 }

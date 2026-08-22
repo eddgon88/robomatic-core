@@ -24,6 +24,7 @@ import com.robomatic.core.v1.repositories.TestExecutionRepository;
 import com.robomatic.core.v1.repositories.TestRepository;
 import com.robomatic.core.v1.repositories.UserRepository;
 import com.robomatic.core.v1.services.GetTestService;
+import com.robomatic.core.v1.services.R2StorageService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -34,7 +35,9 @@ import java.nio.file.Paths;
 import java.util.Base64;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
 
 import static com.robomatic.core.v1.exceptions.messages.NotFoundErrorCode.E404001;
 
@@ -58,6 +61,10 @@ public class GetTestServiceImpl implements GetTestService {
     private FolderRepository folderRepository;
 
     @Autowired
+    private R2StorageService r2StorageService;
+
+
+    @Autowired
     private UserRepository userRepository;
 
     @Autowired
@@ -76,22 +83,31 @@ public class GetTestServiceImpl implements GetTestService {
 
     public List<RecordModel> getTestList(Integer folderId) {
         List<RecordModel> records = new java.util.ArrayList<>();
-        List<TestEntity> tests = new java.util.ArrayList<>();
-        List<FolderEntity> folders = new java.util.ArrayList<>();
+        List<TestEntity> tests;
+        List<FolderEntity> folders;
+        List<ActionRelationalEntity> actions;
 
-        List<ActionRelationalEntity> actions = actionRelationalRepository.findActionsByUser(user.getId());
+        if (user.isSuperAdmin()) {
+            tests = testRepository.findAll();
+            folders = folderRepository.findAll();
+            actions = new java.util.ArrayList<>(); // Empty for super admin, fillRecords will handle it
+        } else {
+            actions = actionRelationalRepository.findActionsByUser(user.getId());
+            tests = new java.util.ArrayList<>();
+            folders = new java.util.ArrayList<>();
 
-        actions.forEach(a -> {
-            if (a.getUserFrom().getId().equals(user.getId()) && a.getActionId().equals(ActionEnum.CREATE.getCode()) && a.getTest() != null) {
-                tests.add(a.getTest());
-            } else if (a.getUserFrom().getId().equals(user.getId()) && a.getTest() == null && a.getFolder() != null) {
-                folders.add(a.getFolder());
-            } else if (a.getUserTo().getId().equals(user.getId()) && a.getTest() != null && a.getFolder() == null) {
-                tests.add(a.getTest());
-            } else if (a.getUserTo().getId().equals(user.getId()) && a.getTest() == null && a.getFolder() != null) {
-                folders.add(a.getFolder());
-            }
-        });
+            actions.forEach(a -> {
+                if (a.getUserFrom().getId().equals(user.getId()) && a.getActionId().equals(ActionEnum.CREATE.getCode()) && a.getTest() != null) {
+                    tests.add(a.getTest());
+                } else if (a.getUserFrom().getId().equals(user.getId()) && a.getTest() == null && a.getFolder() != null) {
+                    folders.add(a.getFolder());
+                } else if (a.getUserTo().getId().equals(user.getId()) && a.getTest() != null && a.getFolder() == null) {
+                    tests.add(a.getTest());
+                } else if (a.getUserTo().getId().equals(user.getId()) && a.getTest() == null && a.getFolder() != null) {
+                    folders.add(a.getFolder());
+                }
+            });
+        }
 
         fillRecords(records, tests, folders, actions, folderId);
         return records;
@@ -102,46 +118,56 @@ public class GetTestServiceImpl implements GetTestService {
         tests.stream().filter(t -> t.getFolderId().equals(folderId)).forEach(t -> {
             ActionRelationalEntity action = actions.stream().filter(a -> a.getTest() != null && a.getTest().getId().equals(t.getId())).findFirst().orElse(null);
             Boolean isRunning = checkIsRunning(t.getId());
-            assert action != null;
-            if (action.getActionId().equals(ActionEnum.CREATE.getCode()))
-                records.add(testMapper.testAndActionToRecord(t, action, PermissionsEnum.OWNER.getValue(), isRunning));
-            if (action.getActionId().equals(ActionEnum.EDIT_PERMISSION.getCode()))
-                records.add(testMapper.testAndActionToRecord(t, action, PermissionsEnum.EDIT.getValue(), isRunning));
-            if (action.getActionId().equals(ActionEnum.EXECUTE_PERMISSION.getCode()))
-                records.add(testMapper.testAndActionToRecord(t, action, PermissionsEnum.EXECUTE.getValue(), isRunning));
-            if (action.getActionId().equals(ActionEnum.VIEW_PERMISSION.getCode()))
-                records.add(testMapper.testAndActionToRecord(t, action, PermissionsEnum.VIEW.getValue(), isRunning));
+            
+            String folderName = null; 
+            
+            if (user.isSuperAdmin()) {
+                records.add(testMapper.testAndActionToRecord(t, null, PermissionsEnum.OWNER.getValue(), isRunning, folderName));
+            } else if (action != null) {
+                if (action.getActionId().equals(ActionEnum.CREATE.getCode()))
+                    records.add(testMapper.testAndActionToRecord(t, action, PermissionsEnum.OWNER.getValue(), isRunning, folderName));
+                if (action.getActionId().equals(ActionEnum.EDIT_PERMISSION.getCode()))
+                    records.add(testMapper.testAndActionToRecord(t, action, PermissionsEnum.EDIT.getValue(), isRunning, folderName));
+                if (action.getActionId().equals(ActionEnum.EXECUTE_PERMISSION.getCode()))
+                    records.add(testMapper.testAndActionToRecord(t, action, PermissionsEnum.EXECUTE.getValue(), isRunning, folderName));
+                if (action.getActionId().equals(ActionEnum.VIEW_PERMISSION.getCode()))
+                    records.add(testMapper.testAndActionToRecord(t, action, PermissionsEnum.VIEW.getValue(), isRunning, folderName));
+            }
         });
         getLastExecution(records);
         
         // Procesar folders con sus permisos
         folders.stream().filter(f -> !f.getId().equals(0) && f.getFolderId().equals(folderId))
                 .forEach(f -> {
-                    ActionRelationalEntity action = actions.stream()
-                            .filter(a -> a.getFolder() != null && a.getFolder().getId().equals(f.getId()))
-                            .findFirst().orElse(null);
-                    
-                    if (action != null) {
-                        String permission;
-                        String userName = action.getUserFrom().getFullName();
-                        
-                        // Determinar el permiso basado en el actionId
-                        if (action.getActionId().equals(ActionEnum.CREATE.getCode())) {
-                            permission = PermissionsEnum.OWNER.getValue();
-                        } else if (action.getActionId().equals(ActionEnum.EDIT_PERMISSION.getCode())) {
-                            permission = PermissionsEnum.EDIT.getValue();
-                        } else if (action.getActionId().equals(ActionEnum.EXECUTE_PERMISSION.getCode())) {
-                            permission = PermissionsEnum.EXECUTE.getValue();
-                        } else if (action.getActionId().equals(ActionEnum.VIEW_PERMISSION.getCode())) {
-                            permission = PermissionsEnum.VIEW.getValue();
-                        } else {
-                            permission = PermissionsEnum.VIEW.getValue(); // Default
-                        }
-                        
-                        records.add(testMapper.folderToRecord(f, permission, userName));
+                    if (user.isSuperAdmin()) {
+                        records.add(testMapper.folderToRecord(f, PermissionsEnum.OWNER.getValue(), "Super Admin"));
                     } else {
-                        // Fallback: usar el método sin permisos (legacy)
-                        records.add(testMapper.folderToRecord(f));
+                        ActionRelationalEntity action = actions.stream()
+                                .filter(a -> a.getFolder() != null && a.getFolder().getId().equals(f.getId()))
+                                .findFirst().orElse(null);
+                        
+                        if (action != null) {
+                            String permission;
+                            String userName = action.getUserFrom().getFullName();
+                            
+                            // Determinar el permiso basado en el actionId
+                            if (action.getActionId().equals(ActionEnum.CREATE.getCode())) {
+                                permission = PermissionsEnum.OWNER.getValue();
+                            } else if (action.getActionId().equals(ActionEnum.EDIT_PERMISSION.getCode())) {
+                                permission = PermissionsEnum.EDIT.getValue();
+                            } else if (action.getActionId().equals(ActionEnum.EXECUTE_PERMISSION.getCode())) {
+                                permission = PermissionsEnum.EXECUTE.getValue();
+                            } else if (action.getActionId().equals(ActionEnum.VIEW_PERMISSION.getCode())) {
+                                permission = PermissionsEnum.VIEW.getValue();
+                            } else {
+                                permission = PermissionsEnum.VIEW.getValue(); // Default
+                            }
+                            
+                            records.add(testMapper.folderToRecord(f, permission, userName));
+                        } else {
+                            // Fallback: usar el método sin permisos (legacy)
+                            records.add(testMapper.folderToRecord(f));
+                        }
                     }
                 });
     }
@@ -185,6 +211,9 @@ public class GetTestServiceImpl implements GetTestService {
      * 4. View permission
      */
     private String getUserPermissionOnTest(Integer testId) {
+        if (user.isSuperAdmin()) {
+            return PermissionsEnum.OWNER.getValue();
+        }
         Integer userId = user.getId();
         
         // Buscar la acción relacionada al usuario para este test
@@ -220,22 +249,46 @@ public class GetTestServiceImpl implements GetTestService {
     }
 
     private String getTestCases(String testCaseDir) {
+        // 1. Intentar leer directamente desde Cloudflare R2
+        if (r2StorageService != null && r2StorageService.isEnabled()) {
+            String r2Base64 = r2StorageService.getTestCaseBase64(testCaseDir);
+            if (r2Base64 != null) {
+                return r2Base64;
+            }
+        }
+
+        // 2. Fallback a lectura desde disco local
         StringBuilder resultStringBuilder = new StringBuilder();
         try (Stream<String> stream = Files.lines(Paths.get(testCaseDir))) {
             stream.forEach(s -> resultStringBuilder.append(s).append("\n"));
         } catch (Exception e) {
+            log.error("Could not find test case file in R2 or local disk: {}", testCaseDir);
             throw new InternalErrorException(InternalErrorCode.E500000);
         }
         byte[] encodedBytes = Base64.getEncoder().encode(resultStringBuilder.toString().getBytes(StandardCharsets.UTF_8));
         return new String(encodedBytes);
     }
 
+
     @Override
     public List<RecordModel> getTestsForScheduler() {
+        if (user.isSuperAdmin()) {
+            return testRepository.findAll().stream().map(test -> {
+                Boolean isRunning = checkIsRunning(test.getId());
+                String folderName = "Root";
+                if (test.getFolderId() != null && test.getFolderId() != 0) {
+                    folderName = folderRepository.findById(test.getFolderId())
+                            .map(FolderEntity::getName)
+                            .orElse("Unknown");
+                }
+                return testMapper.testAndActionToRecord(test, null, PermissionsEnum.OWNER.getValue(), isRunning, folderName);
+            }).collect(Collectors.toList());
+        }
+        
         List<RecordModel> records = new java.util.ArrayList<>();
         
-        // Obtener acciones donde el usuario es owner o tiene permiso de edición
-        List<ActionRelationalEntity> actions = actionRelationalRepository.findTestsWithOwnerOrEditPermission(user.getId());
+        // Obtener acciones donde el usuario es owner o tiene permiso de edición o ejecución
+        List<ActionRelationalEntity> actions = actionRelationalRepository.findTestsWithSchedulablePermission(user.getId());
         
         // Usar un Set para evitar duplicados (un usuario podría tener múltiples permisos sobre el mismo test)
         java.util.Set<Integer> processedTestIds = new java.util.HashSet<>();
@@ -245,12 +298,25 @@ public class GetTestServiceImpl implements GetTestService {
                 TestEntity test = action.getTest();
                 processedTestIds.add(test.getId());
                 
-                String permission = action.getActionId().equals(ActionEnum.CREATE.getCode()) 
-                    ? PermissionsEnum.OWNER.getValue() 
-                    : PermissionsEnum.EDIT.getValue();
+                String permission;
+                if (action.getActionId().equals(ActionEnum.CREATE.getCode())) {
+                    permission = PermissionsEnum.OWNER.getValue();
+                } else if (action.getActionId().equals(ActionEnum.EDIT_PERMISSION.getCode())) {
+                    permission = PermissionsEnum.EDIT.getValue();
+                } else {
+                    permission = PermissionsEnum.EXECUTE.getValue();
+                }
                 
                 Boolean isRunning = checkIsRunning(test.getId());
-                records.add(testMapper.testAndActionToRecord(test, action, permission, isRunning));
+                
+                String folderName = "Root";
+                if (test.getFolderId() != null && test.getFolderId() != 0) {
+                    folderName = folderRepository.findById(test.getFolderId())
+                            .map(FolderEntity::getName)
+                            .orElse("Unknown");
+                }
+                
+                records.add(testMapper.testAndActionToRecord(test, action, permission, isRunning, folderName));
             }
         }
         

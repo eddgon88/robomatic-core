@@ -9,6 +9,7 @@ import com.robomatic.core.v1.exceptions.NotFoundException;
 import com.robomatic.core.v1.mappers.TestMapper;
 import com.robomatic.core.v1.models.UpdateTestRequestModel;
 import com.robomatic.core.v1.models.UserModel;
+import com.robomatic.core.v1.repositories.AiAgentRepository;
 import com.robomatic.core.v1.repositories.ActionRepository;
 import com.robomatic.core.v1.repositories.TestRepository;
 import com.robomatic.core.v1.services.ActionService;
@@ -34,6 +35,9 @@ public class UpdateTestServiceImpl implements UpdateTestService {
 
     @Autowired
     private TestRepository testRepository;
+
+    @Autowired
+    private AiAgentRepository aiAgentRepository;
 
     @Autowired
     private ActionService actionService;
@@ -81,6 +85,10 @@ public class UpdateTestServiceImpl implements UpdateTestService {
 
                 updateTestCaseService.updateTestCase(updateTestRequest.getTestCaseId(),
                         updateTestRequest.getTestCases());
+
+                if (updateTestRequest.getAgentIds() != null) {
+                    testEntity.setAgents(aiAgentRepository.findAllById(updateTestRequest.getAgentIds()));
+                }
                         
                 testEntity = testRepository.save(testEntity);
             }
@@ -108,9 +116,9 @@ public class UpdateTestServiceImpl implements UpdateTestService {
      * Determina el nivel de permiso del usuario sobre un test
      */
     private PermissionLevel getPermissionLevel(Integer testId, Integer userId, Integer roleId) {
-        // Los ADMIN y ANALYST tienen permiso completo
-        if (roleId != null && 
-            (roleId.equals(RoleEnum.ADMIN.getCode()) || roleId.equals(RoleEnum.ANALYST.getCode()))) {
+        // Los Super Admin, ADMIN y ANALYST tienen permiso completo
+        if (currentUser.isSuperAdmin() || (roleId != null && 
+            (roleId.equals(RoleEnum.ADMIN.getCode()) || roleId.equals(RoleEnum.ANALYST.getCode())))) {
             return PermissionLevel.FULL_EDIT;
         }
 

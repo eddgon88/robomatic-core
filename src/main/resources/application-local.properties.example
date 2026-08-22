@@ -1,0 +1,83 @@
+spring.main.banner-mode=false
+spring.jackson.property-naming-strategy=SNAKE_CASE
+spring.datasource.driver-class-name=org.postgresql.Driver
+
+# --- BASE DE DATOS LOCAL / NEON CLOUD ---
+# Ejemplo Neon Pooled: jdbc:postgresql://ep-xxx-pooler.region.aws.neon.tech:5432/core?sslmode=require&stringtype=unspecified
+spring.datasource.url=${DB_URL:jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/core?sslmode=require&stringtype=unspecified}
+spring.datasource.username=${DB_USER:neondb_owner}
+spring.datasource.password=${DB_PWD:your_neon_db_password_here}
+
+spring.datasource.type=com.zaxxer.hikari.HikariDataSource
+spring.datasource.hikari.connection-test-query=SELECT 1
+spring.datasource.hikari.connection-timeout=20000
+spring.datasource.hikari.minimum-idle=2
+spring.datasource.hikari.maximum-pool-size=10
+spring.datasource.hikari.idle-timeout=10000
+spring.datasource.hikari.max-lifetime=30000
+spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect
+spring.jpa.properties.hibernate.format_sql=true
+spring.jpa.properties.hibernate.connection.release_mode=ON_CLOSE
+spring.jpa.properties.hibernate.jdbc.lob.non_contextual_creation=true
+spring.jpa.open-in-view=false
+
+# --- RABBITMQ (CLOUDAMQP SSL o RabbitMQ Local) ---
+# Ejemplo CloudAMQP: amqps://user:password@host.rmq.cloudamqp.com/vhost
+spring.rabbitmq.addresses=${CLOUDAMQP_URL:amqps://your_user:your_password@your_host.rmq.cloudamqp.com/your_vhost}
+spring.rabbitmq.ssl.enabled=true
+
+spring.task.scheduling.pool.size=100
+spring.task.scheduling.thread.name.prefix=ThreadPoolTaskScheduler
+
+# --- DIRECTORIOS DE ALMACENAMIENTO LOCAL ---
+constants.evidenceFileDir=${CASES_FILE_DIR:/home/cases/}
+constants.credentialFileDir=${CREDENTIALS_FILE_DIR:/home/credentials/}
+constants.testPrefix=T
+constants.testCasePrefix=TC
+constants.testExecutionPrefix=TE
+constants.caseExecutionPrefix=CE
+constants.testCaseTerminal=.csv
+constants.credentialPrefix=CRED
+
+# --- CLOUDFLARE R2 CONFIGURATION ---
+r2.endpoint=${R2_ENDPOINT:}
+r2.accessKeyId=${R2_ACCESS_KEY_ID:}
+r2.secretAccessKey=${R2_SECRET_ACCESS_KEY:}
+r2.bucketName=${R2_BUCKET_NAME:robomatic-evidence}
+
+robomatic.encryption.secret-key=${ENCRYPTION_SECRET_KEY:f49da30bff165579e548d10965e0de901821c98f57ddabfc3f62b58588c04a4b}
+
+queues.sendToExecute=tasks.execute_test
+queues.insertCaseExecution=tasks.insert_case_execution
+queues.updateTestExecution=tasks.update_test_execution
+queues.stopTestExecution=tasks.stop_test_execution
+queues.scheduleTestExecution=task.execute_scheduled_test
+queues.incrementExecutionCount=tasks.increment_execution_count
+queues.parkingLot=tasks.parking_lot
+
+# --- MICROSERVICIOS BASE URLS ---
+scheduler.baseUrl=${SCHEDULER_API_URL:http://localhost:5005/scheduler/v1}
+scheduler.endpoint.createJob=/schedule
+scheduler.endpoint.getJob=/schedule/##jobId##
+scheduler.endpoint.getJobs=/schedules/get-jobs
+scheduler.endpoint.deleteJob=/schedule/##jobId##
+
+executor.baseUrl=${TEST_EXECUTOR_API_URL:http://localhost:5007/test-executor/v1}
+executor.webBaseUrl=http://localhost:5008/test-executor/v1
+executor.endpoint.executeTest=/execute
+executor.endpoint.stopTestExecution=/execution/stop
+executor.endpoint.getExecutionPort=/execution/ports/##executionId##
+
+file-manager.baseUrl=${FILE_MANAGER_API_URL:http://localhost:5000/file-manager-api/vi}
+file-manager.endpoint.getEvidenceList=/file/##testExecutionId##
+file-manager.endpoint.convertFile=/file/##fileName##
+file-manager.endpoint.getEvidenceNames=/file/names/##testExecutionId##
+file-manager.endpoint.getEvidenceFile=/file/##testExecutionId##/##fileName##
+file-manager.endpoint.downloadAllEvidences=/file/##testExecutionId##/download-all
+
+mail.baseUrl=${EMAIL_API_URL:http://localhost:5006/email-api/v1}
+mail.endpoint.sendMail=/send-mail
+mail.endpoint.confirm=http://localhost:4200/confirm-mail/##token##
+mail.endpoint.resetPassword=http://localhost:4200/reset-password/##token##
+mail.templateId=mail-confirm.html
+mail.recoveryTemplateId=mail-recovery.html

@@ -11,7 +11,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import com.robomatic.core.v1.entities.ActionRelationalEntity;
+import com.robomatic.core.v1.models.PermissionModel;
+import com.robomatic.core.v1.repositories.ActionRelationalRepository;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -19,6 +24,9 @@ public class ActionServiceImpl implements ActionService {
 
     @Autowired
     private ActionRepository actionRepository;
+
+    @Autowired
+    private ActionRelationalRepository actionRelationalRepository;
 
     @Override
     public ActionEntity createAction(Integer userFrom, Integer userTo, Integer actionId, Integer folderId, Integer testId, Integer testExecutionId) {
@@ -79,6 +87,62 @@ public class ActionServiceImpl implements ActionService {
             case "edit" -> ActionEnum.EDIT_PERMISSION.getCode();
             default -> throw new BadRequestException(BadRequestErrorCode.E400001);
         };
+    }
+
+    @Override
+    public List<PermissionModel> getTestPermissions(Integer testId) {
+        log.info("Getting permissions for test {}", testId);
+        List<ActionRelationalEntity> actions = actionRelationalRepository.findPermissionsByTestId(testId);
+        return actions.stream()
+                .map(this::mapToPermissionModel)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<PermissionModel> getFolderPermissions(Integer folderId) {
+        log.info("Getting permissions for folder {}", folderId);
+        List<ActionRelationalEntity> actions = actionRelationalRepository.findPermissionsByFolderId(folderId);
+        return actions.stream()
+                .map(this::mapToPermissionModel)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public void revokePermission(Integer actionId) {
+        log.info("Revoking permission with action ID {}", actionId);
+        
+        ActionEntity action = actionRepository.findById(actionId)
+                .orElseThrow(() -> new BadRequestException(BadRequestErrorCode.E400001)); // Or generic not found
+
+        // Validar que sea un permiso (5, 6, 7)
+        if (action.getActionId() == 1 || action.getActionId() == 2 || action.getActionId() == 3 || action.getActionId() == 4) {
+             throw new BadRequestException(BadRequestErrorCode.E400001); // No se pueden borrar acciones de sistema/owner
+        }
+        
+        actionRepository.delete(action);
+    }
+
+    private PermissionModel mapToPermissionModel(ActionRelationalEntity entity) {
+        String permission = getPermissionName(entity.getActionId());
+        
+        return PermissionModel.builder()
+                .id(entity.getId())
+                .userId(entity.getUserTo().getId())
+                .userFullName(entity.getUserTo().getFullName())
+                .userEmail(entity.getUserTo().getEmail())
+                .permission(permission)
+                .build();
+    }
+
+    private String getPermissionName(Integer actionId) {
+        if (actionId.equals(ActionEnum.EXECUTE_PERMISSION.getCode())) {
+            return "execute";
+        } else if (actionId.equals(ActionEnum.EDIT_PERMISSION.getCode())) {
+            return "edit";
+        } else if (actionId.equals(ActionEnum.VIEW_PERMISSION.getCode())) {
+            return "view";
+        }
+        return "unknown";
     }
 
 }

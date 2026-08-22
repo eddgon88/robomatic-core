@@ -7,6 +7,7 @@ import com.robomatic.core.v1.exceptions.InternalErrorException;
 import com.robomatic.core.v1.mappers.TestCaseMapper;
 import com.robomatic.core.v1.repositories.TestCaseRepository;
 import com.robomatic.core.v1.services.CreateTestCaseService;
+import com.robomatic.core.v1.services.R2StorageService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -29,6 +30,9 @@ public class CreateTestCaseServiceImpl implements CreateTestCaseService {
     @Autowired
     private TestCaseMapper testCaseMapper;
 
+    @Autowired
+    private R2StorageService r2StorageService;
+
     @Override
     public TestCaseEntity createTestCase(TestEntity test, String testCases, TestCaseEnum testCaseEnum) {
         try {
@@ -36,21 +40,32 @@ public class CreateTestCaseServiceImpl implements CreateTestCaseService {
 
             createTestCaseFile(testCaseEntity.getFileDir(), testCases);
 
+            // Subir a Cloudflare R2
+            r2StorageService.uploadTestCase(testCaseEntity.getFileDir(), testCases);
+
             return testCaseRepository.save(testCaseEntity);
         } catch (Exception e) {
+            log.error("Error creating test case: {}", e.getMessage(), e);
             throw new InternalErrorException(E500002, String.format("Conflicts: %s", e.getMessage()));
         }
     }
 
-    private void createTestCaseFile(String fileDir, String testCases) throws IOException {
-
-        File newFile = new File(fileDir);
-        boolean success = newFile.createNewFile();
-        if (success) {
-            BufferedWriter writer = new BufferedWriter(new FileWriter(fileDir));
-            byte[] decodedBytes = Base64.getDecoder().decode(testCases);
-            writer.write(new String(decodedBytes));
-            writer.close();
+    private void createTestCaseFile(String fileDir, String testCases) {
+        try {
+            File newFile = new File(fileDir);
+            if (newFile.getParentFile() != null) {
+                newFile.getParentFile().mkdirs();
+            }
+            if (!newFile.exists()) {
+                newFile.createNewFile();
+            }
+            try (BufferedWriter writer = new BufferedWriter(new FileWriter(newFile))) {
+                byte[] decodedBytes = Base64.getDecoder().decode(testCases);
+                writer.write(new String(decodedBytes));
+            }
+        } catch (Exception e) {
+            log.warn("Could not write test case to local file: {}. Continuing with R2 storage: {}", fileDir, e.getMessage());
         }
     }
 }
+

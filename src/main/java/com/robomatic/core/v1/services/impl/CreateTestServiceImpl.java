@@ -9,6 +9,7 @@ import com.robomatic.core.v1.exceptions.InternalErrorException;
 import com.robomatic.core.v1.mappers.TestMapper;
 import com.robomatic.core.v1.models.CreateTestRequestModel;
 import com.robomatic.core.v1.models.UserModel;
+import com.robomatic.core.v1.repositories.AiAgentRepository;
 import com.robomatic.core.v1.repositories.TestRepository;
 import com.robomatic.core.v1.services.ActionService;
 import com.robomatic.core.v1.services.CreateTestCaseService;
@@ -31,6 +32,9 @@ public class CreateTestServiceImpl implements CreateTestService {
     protected TestRepository testRepository;
 
     @Autowired
+    protected AiAgentRepository aiAgentRepository;
+
+    @Autowired
     protected CreateTestCaseService createTestCaseService;
 
     @Autowired
@@ -47,11 +51,15 @@ public class CreateTestServiceImpl implements CreateTestService {
         try {
             TestEntity testEntity = testRequestMapper.createTestEntity(createTestRequest);
 
+            if (createTestRequest.getAgentIds() != null && !createTestRequest.getAgentIds().isEmpty()) {
+                testEntity.setAgents(aiAgentRepository.findAllById(createTestRequest.getAgentIds()));
+            }
+
             testEntity = testRepository.save(testEntity);
 
             createTestCaseService.createTestCase(testEntity, createTestRequest.getTestCases(), TestCaseEnum.DEFAULT);
 
-            actionService.createAction(1, null, ActionEnum.CREATE.getCode(), null, testEntity.getId(), null);
+            actionService.createAction(currentUser.getId(), null, ActionEnum.CREATE.getCode(), null, testEntity.getId(), null);
 
             return testEntity;
         } catch (Exception e) {

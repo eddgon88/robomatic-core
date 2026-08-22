@@ -5,7 +5,8 @@ public enum RoleEnum {
     ADMIN("admin", 1),
     EXECUTOR("executor", 2),
     VIEWER("viewer", 3),
-    ANALYST("analyst", 4);
+    ANALYST("analyst", 4),
+    SUPER_ADMIN("super_admin", 5);
 
     private final String value;
     private final Integer code;

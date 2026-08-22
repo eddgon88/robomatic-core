@@ -52,4 +52,13 @@ public class ActionRelationalEntity {
     @JoinColumn(name = "test_execution_id")
     private TestExecutionEntity testExecution;
 
+    @ManyToOne
+    @JoinColumn(name = "ai_agent_id")
+    private AiAgentEntity aiAgent;
+
+    @ManyToOne
+    @JoinColumn(name = "ai_agent_folder_id")
+    private AiAgentFolderEntity aiAgentFolder;
+
 }
+

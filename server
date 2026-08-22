@@ -14,3 +14,4 @@ export RABBITMQ_ADMIN_PASSWORD=admin
 export SPRING_PROFILES_ACTIVE=local
 
 java -Duser.timezone=UTC -Dspring.profiles.active=local -jar build/libs/robomatic-core-0.0.1.jar
+

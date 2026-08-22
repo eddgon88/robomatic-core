@@ -1,27 +1,22 @@
-# crea el jar de la aplicacion en una imagen temporal
-FROM gradle:7.6.4-jdk17 AS build
+# Stage 1: Build Spring Boot JAR
+FROM gradle:8.9-jdk17 AS build
 
 WORKDIR /app/src
 COPY . /app/src
 
-RUN gradle bootjar --no-daemon
+RUN gradle bootJar --no-daemon -x test
 
-# crea una imagen ligera solo con el jar de spring boot
+# Stage 2: Minimal Production JRE Image
 FROM eclipse-temurin:17-jre-jammy
 
-# Definir variables de entorno
-ENV DB_HOST=docker-postgresql
-ENV DB_PORT=5432
-ENV DB_USER=robomatic
-ENV DB_PWD=robomatic
-ENV RABBITMQ_ADMIN_HOST=rabbitmq
-ENV RABBITMQ_ADMIN_PORT=5672
-ENV RABBITMQ_ADMIN_LOGIN=admin
-ENV RABBITMQ_ADMIN_PASSWORD=admin
-ENV SPRING_PROFILES_ACTIVE=local
+WORKDIR /app
 
-COPY --from=build /app/src/build/libs/robomatic-core-0.0.1.jar /app/
+# Cloud Run dynamic port specification (defaults to 8080)
+ENV PORT=8080
+ENV JAVA_OPTS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0"
+
+COPY --from=build /app/src/build/libs/robomatic-core-0.0.1.jar /app/robomatic-core-0.0.1.jar
 
 EXPOSE 8080
 
-ENTRYPOINT ["java", "-Duser.timezone=UTC", "-Dspring.profiles.active=local", "-jar","/app/robomatic-core-0.0.1.jar"]
+ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -Duser.timezone=UTC -Dserver.port=${PORT} -jar /app/robomatic-core-0.0.1.jar"]

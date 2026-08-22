@@ -19,7 +19,9 @@ import com.robomatic.core.v1.repositories.TestCaseRepository;
 import com.robomatic.core.v1.repositories.TestExecutionRepository;
 import com.robomatic.core.v1.repositories.TestRepository;
 import com.robomatic.core.v1.services.ActionService;
+import com.robomatic.core.v1.services.AiAgentService;
 import com.robomatic.core.v1.services.JmsExecuteTestService;
+
 import com.robomatic.core.v1.services.TestCredentialService;
 
 import java.util.List;
@@ -62,6 +64,9 @@ public class JmsExecuteTestServiceImpl implements JmsExecuteTestService {
     @Autowired
     private TestCredentialService testCredentialService;
 
+    @Autowired
+    private AiAgentService aiAgentService;
+
     @Override
     public TestExecutionEntity executeTest(Integer testId, Integer testCaseId) {
         TestEntity testEntity = testRepository.findById(testId).orElseThrow(() -> new NotFoundException(NotFoundErrorCode.E404002));
@@ -76,7 +81,8 @@ public class JmsExecuteTestServiceImpl implements JmsExecuteTestService {
                 credentials.stream().map(CredentialExecutionModel::getName).toList());
 
         TestExecutionModel testExecutionModel = testExecutionMapper.createTestExecutionModel(
-                testEntity, testCaseEntity.getFileDir(), testExecutionEntity.getTestExecutionId(), credentials);
+                testEntity, testCaseEntity.getFileDir(), testExecutionEntity.getTestExecutionId(), 
+                credentials, aiAgentService.getAgentsForTest(testId));
 
         TestExecutionEntity savedEntity = testExecutionRepository.save(testExecutionEntity);
 

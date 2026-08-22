@@ -4,6 +4,7 @@ import com.robomatic.core.v1.dtos.ConstantsDto;
 import com.robomatic.core.v1.entities.TestEntity;
 import com.robomatic.core.v1.entities.TestExecutionEntity;
 import com.robomatic.core.v1.enums.StatusEnum;
+import com.robomatic.core.v1.models.AiAgentModel;
 import com.robomatic.core.v1.models.CredentialExecutionModel;
 import com.robomatic.core.v1.models.TestExecutionModel;
 import com.robomatic.core.v1.utils.RobomaticStringUtils;
@@ -19,7 +20,7 @@ public class TestExecutionMapper {
     private ConstantsDto constantsDto;
 
     public TestExecutionModel createTestExecutionModel(TestEntity testEntity, String testCaseFileDir, 
-            String testExecutionId, List<CredentialExecutionModel> credentials) {
+            String testExecutionId, List<CredentialExecutionModel> credentials, List<AiAgentModel> agents) {
 
         return TestExecutionModel.builder()
                 .script(testEntity.getScript())
@@ -31,9 +32,12 @@ public class TestExecutionMapper {
                 .testExecutionId(testExecutionId)
                 .web(testEntity.isWeb())
                 .credentials(credentials)
+                .agents(agents)
+                .testId(testEntity.getId())
                 .build();
 
     }
+
 
     public TestExecutionEntity createTestExecutionEntity(Integer testId) {
 

@@ -10,6 +10,10 @@ import com.robomatic.core.v1.models.UpdateTestExecutionRequestModel;
 import com.robomatic.core.v1.services.CreateCaseExecutionService;
 import com.robomatic.core.v1.services.JmsExecuteTestService;
 import com.robomatic.core.v1.services.UpdateTestExecutionService;
+import com.robomatic.core.v1.models.ScheduleExecutionMessage;
+import com.robomatic.core.v1.models.ExecutionCountMessage;
+import com.robomatic.core.v1.services.ScheduleService;
+import com.robomatic.core.v1.services.ExecutionCounterService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.core.Message;
 import org.springframework.amqp.rabbit.annotation.RabbitHandler;
@@ -48,6 +52,12 @@ public class JmsListener {
 
     @Autowired
     private JmsExecuteTestService executeTestService;
+
+    @Autowired
+    private ScheduleService scheduleService;
+
+    @Autowired
+    private ExecutionCounterService executionCounterService;
 
 
     @RabbitListener(queues = "${queues.insertCaseExecution}")
@@ -94,7 +104,38 @@ public class JmsListener {
                 this.rabbitTemplate.send(queuesDto.getParkingLot(), message);
                 return;
             }
+
+            try {
+                ScheduleExecutionMessage scheduleMsg = this.gson.fromJson(body, ScheduleExecutionMessage.class);
+                if (scheduleMsg != null && scheduleMsg.getTestId() != null) {
+                    executeTestService.executeDefaultTest(scheduleMsg.getTestId());
+                    if (scheduleMsg.getScheduleId() != null) {
+                        scheduleService.updateNextRunTime(scheduleMsg.getScheduleId());
+                    }
+                    return;
+                }
+            } catch (Exception ignored) {
+                // If JSON parsing fails, try processing as legacy integer format
+            }
+
             executeTestService.executeDefaultTest(Integer.parseInt(body));
+        } catch (Exception e) {
+            log.error(e.getMessage());
+            throw new InternalErrorException(E500001);
+        }
+    }
+
+    @RabbitListener(queues = "${queues.incrementExecutionCount}")
+    @RabbitHandler
+    public void incrementExecutionCount(Message message) {
+        log.info("Listening a message from activeMQ (increment count): {}", message);
+        try {
+            String body = validMessage(message);
+            if(body.equals(REDELIVERED_MESSAGE)) {
+                this.rabbitTemplate.send(queuesDto.getParkingLot(), message);
+                return;
+            }
+            executionCounterService.incrementExecutionCount(this.gson.fromJson(body, ExecutionCountMessage.class));
         } catch (Exception e) {
             log.error(e.getMessage());
             throw new InternalErrorException(E500001);

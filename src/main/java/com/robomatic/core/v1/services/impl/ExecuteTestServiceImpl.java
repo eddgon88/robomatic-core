@@ -13,13 +13,17 @@ import com.robomatic.core.v1.exceptions.messages.InternalErrorCode;
 import com.robomatic.core.v1.exceptions.messages.NotFoundErrorCode;
 import com.robomatic.core.v1.jms.JmsSender;
 import com.robomatic.core.v1.mappers.TestExecutionMapper;
+import com.robomatic.core.v1.models.AiAgentModel;
 import com.robomatic.core.v1.models.CredentialExecutionModel;
 import com.robomatic.core.v1.models.TestExecutionModel;
 import com.robomatic.core.v1.models.UserModel;
+import com.robomatic.core.v1.repositories.AiAgentRepository;
 import com.robomatic.core.v1.repositories.TestCaseRepository;
+
 import com.robomatic.core.v1.repositories.TestExecutionRepository;
 import com.robomatic.core.v1.repositories.TestRepository;
 import com.robomatic.core.v1.services.ActionService;
+import com.robomatic.core.v1.services.ExecutionCounterService;
 import com.robomatic.core.v1.services.ExecuteTestService;
 import com.robomatic.core.v1.services.TestCredentialService;
 import lombok.extern.slf4j.Slf4j;
@@ -64,7 +68,13 @@ public class ExecuteTestServiceImpl implements ExecuteTestService {
     private TestCredentialService credentialService;
 
     @Autowired
+    private AiAgentRepository aiAgentRepository;
+
+    @Autowired
     private UserModel user;
+
+    @Autowired
+    private ExecutionCounterService executionCounterService;
 
     @Override
     public TestExecutionEntity executeTest(Integer testId, Integer testCaseId) {
@@ -80,12 +90,33 @@ public class ExecuteTestServiceImpl implements ExecuteTestService {
         log.info("Credentials for test {}: count={}, names={}", testId, credentials.size(), 
                 credentials.stream().map(CredentialExecutionModel::getName).toList());
 
+        // Obtener agentes de IA para la ejecución
+        List<AiAgentModel> agents = aiAgentRepository.findByTestId(testId).stream()
+                .map(a -> AiAgentModel.builder()
+                        .name(a.getName())
+                        .role(a.getRole())
+                        .goal(a.getGoal())
+                        .backstory(a.getBackstory())
+                        .llm(a.getLlm())
+                        .company(a.getCompany())
+                        .maxIterations(a.getMaxIterations())
+                        .verbose(a.getVerbose())
+                        .temperature(a.getTemperature())
+                        .build())
+                .toList();
+        log.info("AI Agents for test {}: count={}, names={}", testId, agents.size(),
+                agents.stream().map(AiAgentModel::getName).toList());
+
         TestExecutionModel testExecutionModel = testExecutionMapper.createTestExecutionModel(
                 testEntity, 
                 testCaseEntity.getFileDir(), 
                 testExecutionEntity.getTestExecutionId(),
-                credentials
+                credentials,
+                agents
         );
+
+
+        executionCounterService.retrieveAndAttachCounterData(testId, testExecutionModel);
 
         TestExecutionEntity savedEntity = testExecutionRepository.save(testExecutionEntity);
         

@@ -8,7 +8,9 @@ import com.robomatic.core.v1.models.ResetPasswordRequest;
 import com.robomatic.core.v1.models.SingUpRequest;
 import com.robomatic.core.v1.repositories.UserRepository;
 import com.robomatic.core.v1.services.AuthService;
+import com.robomatic.core.v1.services.RateLimitService;
 import com.robomatic.core.v1.utils.JwtUtil;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -49,8 +51,21 @@ public class AuthController {
     @Autowired
     private FunctionCaller functionCaller;
 
+    @Autowired
+    private RateLimitService rateLimitService;
+
     @PostMapping("/login")
-    public ResponseEntity<Object> login(@RequestBody @Valid AuthRequest request) {
+    public ResponseEntity<Object> login(@RequestBody @Valid AuthRequest request, HttpServletRequest httpRequest) {
+        // Obtener IP del cliente
+        String clientIp = getClientIp(httpRequest);
+
+        // Verificar rate limiting
+        if (!rateLimitService.isAllowed(clientIp)) {
+            log.warn("Rate limit exceeded for IP: {}", clientIp);
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                    .body(Map.of("error", "Demasiados intentos de login. Intenta más tarde."));
+        }
+
         try {
             Map<String, String> resp = new HashMap<>();
 
@@ -118,6 +133,23 @@ public class AuthController {
         log.info("Password reset attempt");
         UnaryOperator<Object> function = req -> authService.resetPassword((ResetPasswordRequest) req);
         return functionCaller.callFunction(request, function, HttpStatus.OK);
+    }
+
+    /**
+     * Obtiene la IP del cliente desde la solicitud HTTP
+     */
+    private String getClientIp(HttpServletRequest request) {
+        String[] headers = {"X-Forwarded-For", "Proxy-Client-IP", "WL-Proxy-Client-IP", 
+                           "HTTP_X_FORWARDED_FOR", "HTTP_FORWARDED", "HTTP_CLIENT_IP"};
+
+        for (String header : headers) {
+            String value = request.getHeader(header);
+            if (value != null && !value.isEmpty() && !"unknown".equalsIgnoreCase(value)) {
+                return value.split(",")[0].trim();
+            }
+        }
+
+        return request.getRemoteAddr();
     }
 
 }

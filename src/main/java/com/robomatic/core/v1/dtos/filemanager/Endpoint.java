@@ -13,5 +13,8 @@ public class Endpoint {
 
     private String getEvidenceList;
     private String convertFile;
+    private String getEvidenceNames;
+    private String getEvidenceFile;
+    private String downloadAllEvidences;
 
 }

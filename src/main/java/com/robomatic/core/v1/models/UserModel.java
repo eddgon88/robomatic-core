@@ -1,5 +1,6 @@
 package com.robomatic.core.v1.models;
 
+import com.robomatic.core.v1.enums.RoleEnum;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -17,5 +18,9 @@ public class UserModel {
     private String phone;
     private String email;
     private boolean enabled;
+
+    public boolean isSuperAdmin() {
+        return roleId != null && roleId.equals(RoleEnum.SUPER_ADMIN.getCode());
+    }
 
 }

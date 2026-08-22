@@ -16,10 +16,10 @@ def excludes = [
 
 jacocoTestReport {
   reports {
-    xml.enabled false
-    csv.enabled false
-    html.enabled true
-    html.destination file("${buildDir}/jacocoHtml")
+    xml.required = false
+    csv.required = false
+    html.required = true
+    html.outputLocation = file("${buildDir}/jacocoHtml")
   }
   afterEvaluate {
     classDirectories.setFrom(files(classDirectories.files.collect { fileTree(dir: it, exclude: excludes) }))

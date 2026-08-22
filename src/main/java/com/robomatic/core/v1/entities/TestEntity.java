@@ -1,11 +1,7 @@
 package com.robomatic.core.v1.entities;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
+import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -44,5 +40,14 @@ public class TestEntity {
     private Integer folderId;
 
     private String description;
+
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(
+        name = "test_ai_agent",
+        schema = "core",
+        joinColumns = @JoinColumn(name = "test_id"),
+        inverseJoinColumns = @JoinColumn(name = "ai_agent_id")
+    )
+    private List<AiAgentEntity> agents;
 
 }

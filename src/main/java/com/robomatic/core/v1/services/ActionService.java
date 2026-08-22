@@ -1,7 +1,10 @@
 package com.robomatic.core.v1.services;
 
 import com.robomatic.core.v1.entities.ActionEntity;
+import com.robomatic.core.v1.models.PermissionModel;
 import com.robomatic.core.v1.models.ShareTestRequest;
+
+import java.util.List;
 
 public interface ActionService {
 
@@ -15,5 +18,11 @@ public interface ActionService {
      * @return ActionEntity creada
      */
     ActionEntity shareTest(ShareTestRequest shareTestRequest, Integer currentUserId);
+
+    List<PermissionModel> getTestPermissions(Integer testId);
+
+    List<PermissionModel> getFolderPermissions(Integer folderId);
+
+    void revokePermission(Integer actionId);
 
 }

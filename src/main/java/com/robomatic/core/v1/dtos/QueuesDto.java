@@ -16,6 +16,7 @@ public class QueuesDto {
     private String updateTestExecution;
     private String stopTestExecution;
     private String scheduleTestExecution;
+    private String incrementExecutionCount;
     private String parkingLot;
 
 }

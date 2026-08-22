@@ -72,9 +72,9 @@ public class TestCredentialServiceImpl implements TestCredentialService {
         Integer roleId = currentUser.getRoleId();
         Integer userId = currentUser.getId();
 
-        // Los ADMIN y ANALYST pueden gestionar cualquier credencial
-        if (roleId != null && 
-            (roleId.equals(RoleEnum.ADMIN.getCode()) || roleId.equals(RoleEnum.ANALYST.getCode()))) {
+        // Los Super Admin, ADMIN y ANALYST pueden gestionar cualquier credencial
+        if (currentUser.isSuperAdmin() || (roleId != null && 
+            (roleId.equals(RoleEnum.ADMIN.getCode()) || roleId.equals(RoleEnum.ANALYST.getCode())))) {
             return;
         }
 

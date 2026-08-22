@@ -15,5 +15,6 @@ public class ExecutionPort {
     private String executionId;
     private String seleniumPort;
     private String vncPort;
+    private String sessionId;
 
 }

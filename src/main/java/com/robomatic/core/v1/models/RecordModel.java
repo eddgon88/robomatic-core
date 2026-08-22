@@ -18,6 +18,7 @@ public class RecordModel {
     private String name;
     private String user;
     private Integer folderId;
+    private String folderName;
     private String type;
     private String permissions;
     private LocalDateTime lastUpdate;

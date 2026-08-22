@@ -17,6 +17,8 @@ import com.robomatic.core.v1.models.JobModel;
 import com.robomatic.core.v1.models.ScheduleListModel;
 import com.robomatic.core.v1.models.ScheduleModel;
 import com.robomatic.core.v1.models.UpdateScheduleRequestModel;
+import com.robomatic.core.v1.models.ScheduleExecutionMessage;
+
 import com.robomatic.core.v1.models.UserModel;
 import com.robomatic.core.v1.repositories.ActionRelationalRepository;
 import com.robomatic.core.v1.repositories.ScheduleRepository;
@@ -69,9 +71,9 @@ public class ScheduleServiceImpl implements ScheduleService {
     public ScheduleListModel getAllSchedules() {
         List<ScheduleEntity> entities = scheduleRepository.findAllActive();
         
-        // Filtrar solo los schedules donde el usuario tiene permisos de owner o editor
+        // Filtrar solo los schedules donde el usuario tiene permisos de owner, editor o ejecutor
         List<ScheduleModel> schedules = entities.stream()
-                .filter(entity -> hasPermissionOnTest(entity.getTestId()))
+                .filter(entity -> hasSchedulablePermissionOnTest(entity.getTestId()))
                 .map(this::mapToModel)
                 .collect(Collectors.toList());
 
@@ -136,7 +138,8 @@ public class ScheduleServiceImpl implements ScheduleService {
                 .triggerType(request.getTriggerType())
                 .expression(request.getExpression())
                 .queue(SCHEDULE_QUEUE)
-                .message(String.valueOf(request.getTestId()))
+
+                .message(gson.toJson(new ScheduleExecutionMessage(scheduleId, request.getTestId())))
                 .build();
 
         schedulerClient.createJob(job);
@@ -190,7 +193,7 @@ public class ScheduleServiceImpl implements ScheduleService {
                 .triggerType(triggerType)
                 .expression(expression)
                 .queue(SCHEDULE_QUEUE)
-                .message(String.valueOf(entity.getTestId()))
+                .message(gson.toJson(new ScheduleExecutionMessage(scheduleId, entity.getTestId())))
                 .build();
 
         schedulerClient.createJob(job);
@@ -221,12 +224,11 @@ public class ScheduleServiceImpl implements ScheduleService {
         // Validar permisos
         validatePermissions(entity.getTestId());
 
-        // Eliminar job del scheduler
-        try {
-            schedulerClient.deleteJob(scheduleId);
-        } catch (Exception e) {
-            log.warn("Could not delete job from scheduler: {}", e.getMessage());
-        }
+        // Eliminar job del scheduler.
+        // El SchedulerClientImpl maneja el 404 de forma idempotente (no lanza excepción),
+        // por lo que es seguro propagar cualquier otro error para evitar un soft-delete
+        // en BD mientras el job sigue activo en el motor de scheduling.
+        schedulerClient.deleteJob(scheduleId);
 
         // Marcar como eliminado (soft delete)
         entity.setStatus(ScheduleStatusEnum.DELETED.getCode());
@@ -245,12 +247,11 @@ public class ScheduleServiceImpl implements ScheduleService {
         // Validar permisos
         validatePermissions(entity.getTestId());
 
-        // Eliminar job del scheduler (pausar = eliminar temporalmente)
-        try {
-            schedulerClient.deleteJob(scheduleId);
-        } catch (Exception e) {
-            log.warn("Could not pause job in scheduler: {}", e.getMessage());
-        }
+        // Eliminar job del scheduler (pausar = eliminar temporalmente).
+        // NO usar try-catch silencioso: si el scheduler falla, no se debe persistir el
+        // estado PAUSED en BD para evitar inconsistencia (BD dice pausado, motor sigue corriendo).
+        // El SchedulerClientImpl maneja el 404 de forma idempotente; otros errores se propagan.
+        schedulerClient.deleteJob(scheduleId);
 
         entity.setStatus(ScheduleStatusEnum.PAUSED.getCode());
         entity.setNextRunTime(null);
@@ -278,7 +279,7 @@ public class ScheduleServiceImpl implements ScheduleService {
                 .triggerType(entity.getTriggerType())
                 .expression(expression)
                 .queue(SCHEDULE_QUEUE)
-                .message(String.valueOf(entity.getTestId()))
+                .message(gson.toJson(new ScheduleExecutionMessage(scheduleId, entity.getTestId())))
                 .build();
 
         schedulerClient.createJob(job);
@@ -295,31 +296,59 @@ public class ScheduleServiceImpl implements ScheduleService {
         return mapToModel(saved);
     }
 
+    @Override
+    @Transactional
+    public void updateNextRunTime(String scheduleId) {
+        log.info("Updating next run time for schedule: {}", scheduleId);
+        ScheduleEntity entity = scheduleRepository.findByScheduleId(scheduleId)
+                .orElseThrow(() -> new NotFoundException(E404013));
+
+        try {
+            JobModel job = schedulerClient.getJobById(scheduleId);
+            entity.setNextRunTime(parseNextRunTime(job.getNextRunTime()));
+            entity.setLastRunTime(LocalDateTime.now());
+            entity.setUpdatedAt(LocalDateTime.now());
+            scheduleRepository.save(entity);
+            log.info("Next run time updated for schedule: {}", scheduleId);
+        } catch (Exception e) {
+            log.error("Error updating next run time for schedule {}: {}", scheduleId, e.getMessage());
+        }
+    }
+
     /**
-     * Verifica si el usuario tiene permisos de owner o editor sobre un test.
+     * Verifica si el usuario tiene permisos de owner, editor o ejecutor sobre un test.
      * Retorna true si tiene permisos, false si no.
      */
-    private boolean hasPermissionOnTest(Integer testId) {
+    private boolean hasSchedulablePermissionOnTest(Integer testId) {
         Integer userId = currentUser.getId();
         Integer roleId = currentUser.getRoleId();
+        
+        log.info("Checking schedulable permission for user {} on test {}", userId, testId);
 
-        // Admins y Analysts tienen permiso total
-        //if (roleId != null && (roleId.equals(RoleEnum.ADMIN.getCode()) || roleId.equals(RoleEnum.ANALYST.getCode()))) {
-        //    return true;
-        //}
+        // Super Admin, Admins y Analysts tienen permiso total
+        if (currentUser.isSuperAdmin() || (roleId != null && (roleId.equals(RoleEnum.ADMIN.getCode()) || roleId.equals(RoleEnum.ANALYST.getCode())))) {
+            return true;
+        }
 
-        // Verificar si es owner o tiene permiso de edición
-        List<ActionRelationalEntity> actions = actionRelationalRepository.findTestsWithOwnerOrEditPermission(userId);
-        return actions.stream().anyMatch(action -> 
+        // Verificar si es owner o tiene permiso de edición o ejecución
+        List<ActionRelationalEntity> actions = actionRelationalRepository.findTestsWithSchedulablePermission(userId);
+        
+        log.info("Found {} schedulable actions for user {}", actions.size(), userId);
+        
+        boolean hasPermission = actions.stream().anyMatch(action -> 
             action.getTest() != null && action.getTest().getId().equals(testId)
         );
+        
+        log.info("User {} has permission on test {}: {}", userId, testId, hasPermission);
+        
+        return hasPermission;
     }
 
     /**
      * Valida permisos y lanza excepción si no tiene acceso.
      */
     private void validatePermissions(Integer testId) {
-        if (!hasPermissionOnTest(testId)) {
+        if (!hasSchedulablePermissionOnTest(testId)) {
             throw new BadRequestException(E400026);
         }
     }

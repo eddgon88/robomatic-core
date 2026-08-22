@@ -1,5 +1,6 @@
 package com.robomatic.core.v1.models;
 
+import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -23,6 +24,6 @@ public class UpdateTestRequestModel {
     private boolean web;
     private Integer folderId;
     private String description;
-
+    private List<Integer> agentIds;
 
 }

@@ -1,15 +1,15 @@
 package com.robomatic.core.v1.mappers;
 
-import com.robomatic.core.v1.entities.ActionRelationalEntity;
-import com.robomatic.core.v1.entities.FolderEntity;
-import com.robomatic.core.v1.entities.TestCaseEntity;
-import com.robomatic.core.v1.entities.TestEntity;
+import com.robomatic.core.v1.entities.*;
 import com.robomatic.core.v1.models.CreateTestRequestModel;
 import com.robomatic.core.v1.models.RecordModel;
 import com.robomatic.core.v1.models.TestModel;
 import com.robomatic.core.v1.models.UpdateTestRequestModel;
 import com.robomatic.core.v1.utils.RobomaticStringUtils;
 import org.springframework.stereotype.Component;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Component
 public class TestMapper {
@@ -58,6 +58,8 @@ public class TestMapper {
                 .threads(testEntity.getThreads())
                 .testCaseId(testCaseEntity.getId())
                 .description(testEntity.getDescription())
+                .agentIds(testEntity.getAgents() != null ? 
+                    testEntity.getAgents().stream().map(AiAgentEntity::getId).collect(Collectors.toList()) : null)
                 .build();
 
     }
@@ -75,16 +77,17 @@ public class TestMapper {
                 .build();
     }
 
-    public RecordModel testAndActionToRecord(TestEntity testEntity, ActionRelationalEntity action, String permission, Boolean isRunning) {
+    public RecordModel testAndActionToRecord(TestEntity testEntity, ActionRelationalEntity action, String permission, Boolean isRunning, String folderName) {
         return RecordModel.builder()
                 .id(testEntity.getId())
                 .recordId(testEntity.getTestId())
                 .type("test")
                 .folderId(testEntity.getFolderId())
+                .folderName(folderName)
                 .name(testEntity.getName())
                 .permissions(permission)
-                .user(action.getUserFrom().getFullName())
-                .lastUpdate(action.getDate())
+                .user(action != null ? action.getUserFrom().getFullName() : "Super Admin")
+                .lastUpdate(action != null ? action.getDate() : null)
                 .isRunning(isRunning)
                 .web(testEntity.isWeb())
                 .build();

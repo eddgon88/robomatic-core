@@ -5,11 +5,13 @@ import com.robomatic.core.v1.exceptions.InternalErrorException;
 import com.robomatic.core.v1.exceptions.NotFoundException;
 import com.robomatic.core.v1.repositories.TestCaseRepository;
 import com.robomatic.core.v1.services.UpdateTestCaseService;
+import com.robomatic.core.v1.services.R2StorageService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.io.BufferedWriter;
+import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Base64;
@@ -24,6 +26,9 @@ public class UpdateTestCaseServiceImpl implements UpdateTestCaseService {
     @Autowired
     private TestCaseRepository testCaseRepository;
 
+    @Autowired
+    private R2StorageService r2StorageService;
+
     @Override
     public TestCaseEntity updateTestCase(Integer testCaseId, String testCases) {
 
@@ -32,19 +37,30 @@ public class UpdateTestCaseServiceImpl implements UpdateTestCaseService {
 
             updateTestCaseFile(testCaseEntity.getFileDir(), testCases);
 
+            // Actualizar en Cloudflare R2
+            r2StorageService.uploadTestCase(testCaseEntity.getFileDir(), testCases);
+
             return testCaseEntity;
         } catch (Exception e) {
+            log.error("Error updating test case: {}", e.getMessage(), e);
             throw new InternalErrorException(E500003, String.format("Conflicts: %s", e.getMessage()));
         }
 
     }
 
-    private void updateTestCaseFile(String fileDir, String testCases) throws IOException {
-
-        BufferedWriter writer = new BufferedWriter(new FileWriter(fileDir));
-        byte[] decodedBytes = Base64.getDecoder().decode(testCases);
-        writer.write(new String(decodedBytes));
-        writer.close();
-
+    private void updateTestCaseFile(String fileDir, String testCases) {
+        try {
+            File file = new File(fileDir);
+            if (file.getParentFile() != null) {
+                file.getParentFile().mkdirs();
+            }
+            try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
+                byte[] decodedBytes = Base64.getDecoder().decode(testCases);
+                writer.write(new String(decodedBytes));
+            }
+        } catch (Exception e) {
+            log.warn("Could not update local test case file: {}. Continuing with R2 storage: {}", fileDir, e.getMessage());
+        }
     }
 }
+

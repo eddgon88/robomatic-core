@@ -1,5 +1,6 @@
 package com.robomatic.core.v1.models;
 
+import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -24,5 +25,6 @@ public class TestModel {
     private String testCases;
     private String permissions;
     private String description;
+    private List<Integer> agentIds;
 
 }

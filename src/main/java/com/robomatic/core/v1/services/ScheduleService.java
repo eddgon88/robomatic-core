@@ -22,6 +22,8 @@ public interface ScheduleService {
     ScheduleModel pauseSchedule(String scheduleId);
 
     ScheduleModel resumeSchedule(String scheduleId);
+
+    void updateNextRunTime(String scheduleId);
 }
 
 

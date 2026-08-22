@@ -22,5 +22,10 @@ public class TestExecutionModel {
     private String testExecutionId;
     private boolean web;
     private List<CredentialExecutionModel> credentials;
+    private List<AiAgentModel> agents;
+    private Integer testId;
+
+    private Integer maxExecutions;
+    private Integer currentExecutions;
 
 }

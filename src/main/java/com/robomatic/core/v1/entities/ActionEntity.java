@@ -45,4 +45,11 @@ public class ActionEntity {
     @Column(name = "test_execution_id")
     private Integer testExecutionId;
 
+    @Column(name = "ai_agent_id")
+    private Integer aiAgentId;
+
+    @Column(name = "ai_agent_folder_id")
+    private Integer aiAgentFolderId;
+
 }
+

@@ -27,7 +27,8 @@ public enum BadRequestErrorCode {
     E400023("400023", "A schedule already exists for this test."),
     E400024("400024", "Invalid trigger type. Must be: cron, interval, or date."),
     E400025("400025", "Invalid schedule expression."),
-    E400026("400026", "You don't have permission to manage schedules for this test.");
+    E400026("400026", "You don't have permission to manage schedules for this test."),
+    E400027("400026", "test_id is required");
 
     private final String code;
     private final String message;
