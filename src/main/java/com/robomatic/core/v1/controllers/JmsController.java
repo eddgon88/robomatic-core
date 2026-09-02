@@ -13,7 +13,6 @@ import java.util.function.UnaryOperator;
 
 @Slf4j
 @RestController
-@CrossOrigin(origins = {"http://localhost:4200","http://robomatic.cloud","https://robomatic.cloud"})
 @RequestMapping("/core/v1/")
 public class JmsController {
 

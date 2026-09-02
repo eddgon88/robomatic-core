@@ -32,7 +32,6 @@ import java.util.function.UnaryOperator;
 
 @RestController
 @RequestMapping("/core/v1/auth")
-@CrossOrigin(origins = {"http://localhost:4200","http://robomatic.cloud","https://robomatic.cloud"})
 @Slf4j
 public class AuthController {
 

@@ -10,7 +10,6 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/v1/ai-interactions")
-@CrossOrigin(origins = "*")
 public class AiInteractionController {
 
     @Autowired
