@@ -32,57 +32,95 @@ public class RabbitMqConfiguration {
     @Value("${cloudamqp.url:${CLOUDAMQP_URL:}}")
     private String rabbitmqUrl;
 
-    @Value("${spring.rabbitmq.broker-host:localhost}")
+    @Value("${rabbitmq.host:${RABBITMQ_HOST:${spring.rabbitmq.broker-host:localhost}}}")
     private String brokerHost;
 
-    @Value("${spring.rabbitmq.broker-port:5672}")
+    @Value("${rabbitmq.port:${RABBITMQ_PORT:${spring.rabbitmq.broker-port:5672}}}")
     private Integer brokerPort;
 
-    @Value("${spring.rabbitmq.user:admin}")
+    @Value("${rabbitmq.user:${RABBITMQ_USER:${spring.rabbitmq.user:admin}}}")
     private String username;
 
-    @Value("${spring.rabbitmq.password:admin}")
+    @Value("${rabbitmq.password:${RABBITMQ_PASSWORD:${spring.rabbitmq.password:admin}}}")
     private String password;
+
+    @Value("${rabbitmq.vhost:${RABBITMQ_VHOST:/}}")
+    private String virtualHost;
+
+    @Value("${rabbitmq.ssl:${RABBITMQ_SSL:false}}")
+    private Boolean sslEnabled;
 
     @Bean
     public ConnectionFactory connectionFactory() {
-        // --- CONFIGURACION CLOUDAMQP SSL (AMQPS URI) ---
+        String host = brokerHost;
+        int port = brokerPort;
+        String user = username;
+        String pass = password;
+        String vhost = virtualHost;
+        boolean useSsl = Boolean.TRUE.equals(sslEnabled);
+
         if (rabbitmqUrl != null && !rabbitmqUrl.trim().isEmpty()) {
             try {
                 String cleanedUri = rabbitmqUrl.trim().replaceAll("^[\"']|[\"']$", "");
                 String maskedUri = cleanedUri.replaceAll(":[^:@]+@", ":****@");
-                logger.info("Configuring RabbitMQ ConnectionFactory with CloudAMQP URI: {}", maskedUri);
+                logger.info("Parsing RabbitMQ configuration from URI: {}", maskedUri);
 
                 URI uri = URI.create(cleanedUri);
-                com.rabbitmq.client.ConnectionFactory rabbitFactory = new com.rabbitmq.client.ConnectionFactory();
-                rabbitFactory.setUri(uri);
-                if ("amqps".equalsIgnoreCase(uri.getScheme())) {
-                    rabbitFactory.useSslProtocol();
-                    rabbitFactory.enableHostnameVerification();
+                if (uri.getHost() != null) host = uri.getHost();
+                if (uri.getPort() > 0) {
+                    port = uri.getPort();
+                } else if ("amqps".equalsIgnoreCase(uri.getScheme())) {
+                    port = 5671;
                 }
-
-                CachingConnectionFactory connectionFactory = new CachingConnectionFactory(rabbitFactory);
-                connectionFactory.setHost(rabbitFactory.getHost());
-                connectionFactory.setPort(rabbitFactory.getPort());
-                connectionFactory.setUsername(rabbitFactory.getUsername());
-                connectionFactory.setPassword(rabbitFactory.getPassword());
-                connectionFactory.setVirtualHost(rabbitFactory.getVirtualHost());
-
-                logger.info("RabbitMQ ConnectionFactory initialized successfully for host: {}, port: {}, vhost: {}, username: {}",
-                        connectionFactory.getHost(), connectionFactory.getPort(), connectionFactory.getVirtualHost(), connectionFactory.getUsername());
-                return connectionFactory;
+                if (uri.getUserInfo() != null) {
+                    String[] credentials = uri.getUserInfo().split(":", 2);
+                    user = credentials[0];
+                    if (credentials.length > 1) {
+                        pass = credentials[1];
+                    }
+                }
+                if (uri.getPath() != null && uri.getPath().length() > 1) {
+                    vhost = uri.getPath().substring(1);
+                }
+                if ("amqps".equalsIgnoreCase(uri.getScheme())) {
+                    useSsl = true;
+                }
             } catch (Exception e) {
-                logger.error("Error setting up CloudAMQP URI ConnectionFactory: {}", e.getMessage(), e);
+                logger.error("Error parsing CloudAMQP URI: {}", e.getMessage(), e);
             }
         }
 
-        // --- CODIGO ORIGINAL EC2 / LOCAL (Fallback) ---
-        CachingConnectionFactory connectionFactory = new CachingConnectionFactory();
-        connectionFactory.setHost(brokerHost);
-        connectionFactory.setPort(brokerPort);
-        connectionFactory.setUsername(username);
-        connectionFactory.setPassword(password);
-        return connectionFactory;
+        try {
+            logger.info("Initializing RabbitMQ ConnectionFactory -> host: {}, port: {}, vhost: {}, user: {}, ssl: {}",
+                    host, port, vhost, user, useSsl);
+
+            com.rabbitmq.client.ConnectionFactory rabbitFactory = new com.rabbitmq.client.ConnectionFactory();
+            rabbitFactory.setHost(host);
+            rabbitFactory.setPort(port);
+            rabbitFactory.setUsername(user);
+            rabbitFactory.setPassword(pass);
+            rabbitFactory.setVirtualHost(vhost);
+
+            if (useSsl) {
+                rabbitFactory.useSslProtocol();
+                rabbitFactory.enableHostnameVerification();
+            }
+
+            CachingConnectionFactory connectionFactory = new CachingConnectionFactory(rabbitFactory);
+            connectionFactory.setHost(host);
+            connectionFactory.setPort(port);
+            connectionFactory.setUsername(user);
+            connectionFactory.setPassword(pass);
+            connectionFactory.setVirtualHost(vhost);
+
+            return connectionFactory;
+        } catch (Exception e) {
+            logger.error("Failed to initialize RabbitMQ ConnectionFactory: {}", e.getMessage(), e);
+            CachingConnectionFactory fallback = new CachingConnectionFactory();
+            fallback.setHost(host);
+            fallback.setPort(port);
+            return fallback;
+        }
     }
 
     @Bean
