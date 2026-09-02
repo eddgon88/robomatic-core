@@ -11,7 +11,6 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 
 @EnableScheduling
 @EnableConfigurationProperties
-@EnableJms
 @EnableRabbit
 @Slf4j
 @SpringBootApplication
