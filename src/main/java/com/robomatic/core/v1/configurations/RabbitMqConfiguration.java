@@ -52,15 +52,12 @@ public class RabbitMqConfiguration {
                 String maskedUri = cleanedUri.replaceAll(":[^:@]+@", ":****@");
                 logger.info("Configuring RabbitMQ ConnectionFactory with CloudAMQP URI: {}", maskedUri);
 
-                com.rabbitmq.client.ConnectionFactory rabbitFactory = new com.rabbitmq.client.ConnectionFactory();
-                rabbitFactory.setUri(URI.create(cleanedUri));
-                rabbitFactory.enableHostnameVerification();
-                rabbitFactory.setAutomaticRecoveryEnabled(true);
-                rabbitFactory.setNetworkRecoveryInterval(10000);
+                URI uri = URI.create(cleanedUri);
+                CachingConnectionFactory connectionFactory = new CachingConnectionFactory(uri);
+                connectionFactory.getRabbitConnectionFactory().enableHostnameVerification();
 
-                CachingConnectionFactory connectionFactory = new CachingConnectionFactory(rabbitFactory);
                 logger.info("RabbitMQ ConnectionFactory initialized successfully for host: {}, port: {}, vhost: {}",
-                        rabbitFactory.getHost(), rabbitFactory.getPort(), rabbitFactory.getVirtualHost());
+                        connectionFactory.getHost(), connectionFactory.getPort(), connectionFactory.getVirtualHost());
                 return connectionFactory;
             } catch (Exception e) {
                 logger.error("Error setting up CloudAMQP URI ConnectionFactory: {}", e.getMessage(), e);
