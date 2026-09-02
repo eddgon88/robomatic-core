@@ -54,25 +54,19 @@ public class RabbitMqConfiguration {
                 logger.info("Configuring RabbitMQ ConnectionFactory with CloudAMQP URI: {}", maskedUri);
 
                 URI uri = URI.create(cleanedUri);
-                CachingConnectionFactory connectionFactory = new CachingConnectionFactory();
-                connectionFactory.setHost(uri.getHost());
-                int port = uri.getPort() > 0 ? uri.getPort() : ("amqps".equalsIgnoreCase(uri.getScheme()) ? 5671 : 5672);
-                connectionFactory.setPort(port);
-
-                if (uri.getUserInfo() != null) {
-                    String[] credentials = uri.getUserInfo().split(":", 2);
-                    connectionFactory.setUsername(credentials[0]);
-                    if (credentials.length > 1) {
-                        connectionFactory.setPassword(credentials[1]);
-                    }
-                }
-                if (uri.getPath() != null && uri.getPath().length() > 1) {
-                    connectionFactory.setVirtualHost(uri.getPath().substring(1));
-                }
+                com.rabbitmq.client.ConnectionFactory rabbitFactory = new com.rabbitmq.client.ConnectionFactory();
+                rabbitFactory.setUri(uri);
                 if ("amqps".equalsIgnoreCase(uri.getScheme())) {
-                    connectionFactory.getRabbitConnectionFactory().useSslProtocol();
-                    connectionFactory.getRabbitConnectionFactory().enableHostnameVerification();
+                    rabbitFactory.useSslProtocol();
+                    rabbitFactory.enableHostnameVerification();
                 }
+
+                CachingConnectionFactory connectionFactory = new CachingConnectionFactory(rabbitFactory);
+                connectionFactory.setHost(rabbitFactory.getHost());
+                connectionFactory.setPort(rabbitFactory.getPort());
+                connectionFactory.setUsername(rabbitFactory.getUsername());
+                connectionFactory.setPassword(rabbitFactory.getPassword());
+                connectionFactory.setVirtualHost(rabbitFactory.getVirtualHost());
 
                 logger.info("RabbitMQ ConnectionFactory initialized successfully for host: {}, port: {}, vhost: {}, username: {}",
                         connectionFactory.getHost(), connectionFactory.getPort(), connectionFactory.getVirtualHost(), connectionFactory.getUsername());
