@@ -12,6 +12,7 @@ import org.springframework.amqp.rabbit.config.SimpleRabbitListenerContainerFacto
 import org.springframework.amqp.rabbit.connection.CachingConnectionFactory;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitAdmin;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -28,8 +29,8 @@ public class RabbitMqConfiguration {
     @Autowired
     private QueuesDto queuesDto;
 
-    @Value("${spring.rabbitmq.addresses:${CLOUDAMQP_URL:}}")
-    private String rabbitmqAddresses;
+    @Value("${cloudamqp.url:${CLOUDAMQP_URL:}}")
+    private String rabbitmqUrl;
 
     @Value("${spring.rabbitmq.broker-host:localhost}")
     private String brokerHost;
@@ -46,18 +47,35 @@ public class RabbitMqConfiguration {
     @Bean
     public ConnectionFactory connectionFactory() {
         // --- CONFIGURACION CLOUDAMQP SSL (AMQPS URI) ---
-        if (rabbitmqAddresses != null && !rabbitmqAddresses.trim().isEmpty()) {
+        if (rabbitmqUrl != null && !rabbitmqUrl.trim().isEmpty()) {
             try {
-                String cleanedUri = rabbitmqAddresses.trim().replaceAll("^[\"']|[\"']$", "");
+                String cleanedUri = rabbitmqUrl.trim().replaceAll("^[\"']|[\"']$", "");
                 String maskedUri = cleanedUri.replaceAll(":[^:@]+@", ":****@");
                 logger.info("Configuring RabbitMQ ConnectionFactory with CloudAMQP URI: {}", maskedUri);
 
                 URI uri = URI.create(cleanedUri);
-                CachingConnectionFactory connectionFactory = new CachingConnectionFactory(uri);
-                connectionFactory.getRabbitConnectionFactory().enableHostnameVerification();
+                CachingConnectionFactory connectionFactory = new CachingConnectionFactory();
+                connectionFactory.setHost(uri.getHost());
+                int port = uri.getPort() > 0 ? uri.getPort() : ("amqps".equalsIgnoreCase(uri.getScheme()) ? 5671 : 5672);
+                connectionFactory.setPort(port);
 
-                logger.info("RabbitMQ ConnectionFactory initialized successfully for host: {}, port: {}, vhost: {}",
-                        connectionFactory.getHost(), connectionFactory.getPort(), connectionFactory.getVirtualHost());
+                if (uri.getUserInfo() != null) {
+                    String[] credentials = uri.getUserInfo().split(":", 2);
+                    connectionFactory.setUsername(credentials[0]);
+                    if (credentials.length > 1) {
+                        connectionFactory.setPassword(credentials[1]);
+                    }
+                }
+                if (uri.getPath() != null && uri.getPath().length() > 1) {
+                    connectionFactory.setVirtualHost(uri.getPath().substring(1));
+                }
+                if ("amqps".equalsIgnoreCase(uri.getScheme())) {
+                    connectionFactory.getRabbitConnectionFactory().useSslProtocol();
+                    connectionFactory.getRabbitConnectionFactory().enableHostnameVerification();
+                }
+
+                logger.info("RabbitMQ ConnectionFactory initialized successfully for host: {}, port: {}, vhost: {}, username: {}",
+                        connectionFactory.getHost(), connectionFactory.getPort(), connectionFactory.getVirtualHost(), connectionFactory.getUsername());
                 return connectionFactory;
             } catch (Exception e) {
                 logger.error("Error setting up CloudAMQP URI ConnectionFactory: {}", e.getMessage(), e);
@@ -78,12 +96,21 @@ public class RabbitMqConfiguration {
         SimpleRabbitListenerContainerFactory factory = new SimpleRabbitListenerContainerFactory();
         factory.setConnectionFactory(connectionFactory);
         factory.setAutoStartup(true);
+        factory.setMissingQueuesFatal(false);
+        factory.setFailedDeclarationRetryInterval(10000L);
         return factory;
     }
 
     @Bean
+    public RabbitTemplate rabbitTemplate(ConnectionFactory connectionFactory) {
+        return new RabbitTemplate(connectionFactory);
+    }
+
+    @Bean
     public RabbitAdmin admin(ConnectionFactory connectionFactory) {
-        return new RabbitAdmin(connectionFactory);
+        RabbitAdmin rabbitAdmin = new RabbitAdmin(connectionFactory);
+        rabbitAdmin.setIgnoreDeclarationExceptions(true);
+        return rabbitAdmin;
     }
 
     @Bean
@@ -112,4 +139,5 @@ public class RabbitMqConfiguration {
     }
 
 }
+
 

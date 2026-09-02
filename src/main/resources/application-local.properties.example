@@ -26,8 +26,7 @@ spring.jpa.open-in-view=false
 
 # --- RABBITMQ (CLOUDAMQP SSL o RabbitMQ Local) ---
 # Ejemplo CloudAMQP: amqps://user:password@host.rmq.cloudamqp.com/vhost
-spring.rabbitmq.addresses=${CLOUDAMQP_URL:amqps://your_user:your_password@your_host.rmq.cloudamqp.com/your_vhost}
-spring.rabbitmq.ssl.enabled=true
+cloudamqp.url=${CLOUDAMQP_URL:amqps://your_user:your_password@your_host.rmq.cloudamqp.com/your_vhost}
 
 spring.task.scheduling.pool.size=100
 spring.task.scheduling.thread.name.prefix=ThreadPoolTaskScheduler
