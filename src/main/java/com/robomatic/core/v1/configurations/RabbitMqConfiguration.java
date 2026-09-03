@@ -74,13 +74,13 @@ public class RabbitMqConfiguration {
                 }
                 if (uri.getUserInfo() != null) {
                     String[] credentials = uri.getUserInfo().split(":", 2);
-                    user = credentials[0];
+                    user = credentials[0].trim();
                     if (credentials.length > 1) {
-                        pass = credentials[1];
+                        pass = credentials[1].trim().replaceAll("^[\"']|[\"']$", "");
                     }
                 }
                 if (uri.getPath() != null && uri.getPath().length() > 1) {
-                    vhost = uri.getPath().substring(1);
+                    vhost = uri.getPath().substring(1).trim().replaceAll("^[\"']|[\"']$", "");
                 }
                 if ("amqps".equalsIgnoreCase(uri.getScheme())) {
                     useSsl = true;
@@ -91,8 +91,8 @@ public class RabbitMqConfiguration {
         }
 
         try {
-            logger.info("Initializing RabbitMQ ConnectionFactory -> host: {}, port: {}, vhost: {}, user: {}, ssl: {}",
-                    host, port, vhost, user, useSsl);
+            logger.info("Initializing RabbitMQ ConnectionFactory -> host: {}, port: {}, vhost: [{}], user: [{}], passLength: {}, ssl: {}",
+                    host, port, vhost, user, (pass != null ? pass.length() : 0), useSsl);
 
             com.rabbitmq.client.ConnectionFactory rabbitFactory = new com.rabbitmq.client.ConnectionFactory();
             rabbitFactory.setHost(host);
