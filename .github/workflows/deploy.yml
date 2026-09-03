@@ -59,18 +59,17 @@ jobs:
           FILE_MANAGER_URL=$(echo "$RAW_FILE_MANAGER_URL" | tr -d '[:space:]')
           EMAIL_URL=$(echo "$RAW_EMAIL_URL" | tr -d '[:space:]')
 
-          cat <<EOF > env.yaml
-DB_HOST: "${NEON_HOST}"
-DB_PORT: "5432"
-DB_USER: "${NEON_USER}"
-R2_ENDPOINT: "${R2_ENDPOINT}"
-R2_BUCKET_NAME: "robomatic-evidence"
-SCHEDULER_API_URL: "${SCHEDULER_URL}"
-TEST_EXECUTOR_API_URL: "${TEST_EXECUTOR_URL}"
-FILE_MANAGER_API_URL: "${FILE_MANAGER_URL}"
-EMAIL_API_URL: "${EMAIL_URL}"
-CORS_ALLOWED_ORIGINS: "http://localhost:4200,http://robomatic.cloud,https://robomatic.cloud,https://robomatic-fe.vercel.app"
-EOF
+          echo "DB_HOST: \"${NEON_HOST}\"" > env.yaml
+          echo "DB_PORT: \"5432\"" >> env.yaml
+          echo "DB_USER: \"${NEON_USER}\"" >> env.yaml
+          echo "R2_ENDPOINT: \"${R2_ENDPOINT}\"" >> env.yaml
+          echo "R2_BUCKET_NAME: \"robomatic-evidence\"" >> env.yaml
+          echo "SCHEDULER_API_URL: \"${SCHEDULER_URL}\"" >> env.yaml
+          echo "TEST_EXECUTOR_API_URL: \"${TEST_EXECUTOR_URL}\"" >> env.yaml
+          echo "FILE_MANAGER_API_URL: \"${FILE_MANAGER_URL}\"" >> env.yaml
+          echo "EMAIL_API_URL: \"${EMAIL_URL}\"" >> env.yaml
+          echo "CORS_ALLOWED_ORIGINS: \"http://localhost:4200,http://robomatic.cloud,https://robomatic.cloud,https://robomatic-fe.vercel.app\"" >> env.yaml
+
 
           gcloud run deploy ${{ env.SERVICE_NAME }} \
             --image "${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.GAR_REPOSITORY }}/${{ env.SERVICE_NAME }}:${{ github.sha }}" \
