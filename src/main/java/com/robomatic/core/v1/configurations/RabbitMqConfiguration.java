@@ -18,6 +18,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.util.backoff.FixedBackOff;
 
 import java.net.URI;
 
@@ -49,6 +50,16 @@ public class RabbitMqConfiguration {
 
     @Value("${rabbitmq.ssl:${RABBITMQ_SSL:false}}")
     private Boolean sslEnabled;
+
+    @Value("${rabbitmq.listener.auto-startup:${RABBITMQ_LISTENER_AUTO_STARTUP:true}}")
+    private Boolean listenerAutoStartup;
+
+    @Value("${rabbitmq.listener.max-attempts:${RABBITMQ_LISTENER_MAX_ATTEMPTS:3}}")
+    private Long maxListenerRecoveryAttempts;
+
+    @Value("${rabbitmq.listener.recovery-interval:${RABBITMQ_LISTENER_RECOVERY_INTERVAL:10000}}")
+    private Long listenerRecoveryInterval;
+
 
     @Bean
     public ConnectionFactory connectionFactory() {
@@ -127,9 +138,15 @@ public class RabbitMqConfiguration {
     public SimpleRabbitListenerContainerFactory rabbitListenerContainerFactory(ConnectionFactory connectionFactory) {
         SimpleRabbitListenerContainerFactory factory = new SimpleRabbitListenerContainerFactory();
         factory.setConnectionFactory(connectionFactory);
-        factory.setAutoStartup(true);
+        boolean autoStart = listenerAutoStartup == null || Boolean.TRUE.equals(listenerAutoStartup);
+        factory.setAutoStartup(autoStart);
         factory.setMissingQueuesFatal(false);
-        factory.setFailedDeclarationRetryInterval(10000L);
+        long attempts = (maxListenerRecoveryAttempts != null && maxListenerRecoveryAttempts > 0) ? maxListenerRecoveryAttempts : 3L;
+        long interval = (listenerRecoveryInterval != null && listenerRecoveryInterval > 0) ? listenerRecoveryInterval : 10000L;
+        factory.setFailedDeclarationRetryInterval(interval);
+        factory.setRecoveryBackOff(new FixedBackOff(interval, attempts));
+        logger.info("Configured rabbitListenerContainerFactory -> autoStartup: {}, maxAttempts: {}, recoveryInterval: {}ms",
+                autoStart, attempts, interval);
         return factory;
     }
 
