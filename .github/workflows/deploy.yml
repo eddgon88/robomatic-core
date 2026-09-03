@@ -40,7 +40,25 @@ jobs:
           docker push "$LATEST_URI"
 
       - name: Deploy to Cloud Run
+        env:
+          RAW_NEON_HOST: ${{ secrets.NEON_POOLED_HOST }}
+          RAW_NEON_USER: ${{ secrets.NEON_DB_USER }}
+          RAW_R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          RAW_SCHEDULER_URL: ${{ secrets.SCHEDULER_API_URL }}
+          RAW_TEST_EXECUTOR_URL: ${{ secrets.TEST_EXECUTOR_API_URL }}
+          RAW_FILE_MANAGER_URL: ${{ secrets.FILE_MANAGER_API_URL }}
+          RAW_EMAIL_URL: ${{ secrets.EMAIL_API_URL }}
         run: |
+          NEON_HOST=$(echo "$RAW_NEON_HOST" | tr -d '[:space:]')
+          [ -z "$NEON_HOST" ] && NEON_HOST="ep-empty-resonance-acp1nby5-pooler.sa-east-1.aws.neon.tech"
+          NEON_USER=$(echo "$RAW_NEON_USER" | tr -d '[:space:]')
+          [ -z "$NEON_USER" ] && NEON_USER="neondb_owner"
+          R2_ENDPOINT=$(echo "$RAW_R2_ENDPOINT" | tr -d '[:space:]')
+          SCHEDULER_URL=$(echo "$RAW_SCHEDULER_URL" | tr -d '[:space:]')
+          TEST_EXECUTOR_URL=$(echo "$RAW_TEST_EXECUTOR_URL" | tr -d '[:space:]')
+          FILE_MANAGER_URL=$(echo "$RAW_FILE_MANAGER_URL" | tr -d '[:space:]')
+          EMAIL_URL=$(echo "$RAW_EMAIL_URL" | tr -d '[:space:]')
+
           gcloud run deploy ${{ env.SERVICE_NAME }} \
             --image "${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.GAR_REPOSITORY }}/${{ env.SERVICE_NAME }}:${{ github.sha }}" \
             --region ${{ env.REGION }} \
@@ -50,7 +68,8 @@ jobs:
             --memory 2Gi \
             --min-instances 0 \
             --max-instances 5 \
-            --set-env-vars DB_HOST=${{ secrets.NEON_POOLED_HOST }},DB_PORT=5432,DB_USER=${{ secrets.NEON_DB_USER }},R2_ENDPOINT=${{ secrets.R2_ENDPOINT }},R2_BUCKET_NAME=robomatic-evidence,SCHEDULER_API_URL=${{ secrets.SCHEDULER_API_URL }},TEST_EXECUTOR_API_URL=${{ secrets.TEST_EXECUTOR_API_URL }},FILE_MANAGER_API_URL=${{ secrets.FILE_MANAGER_API_URL }},EMAIL_API_URL=${{ secrets.EMAIL_API_URL }},CORS_ALLOWED_ORIGINS="http://localhost:4200,http://robomatic.cloud,https://robomatic.cloud,https://robomatic-fe.vercel.app" \
-            --set-secrets DB_PWD=NEON_DB_PASSWORD:latest,CLOUDAMQP_URL=CLOUDAMQP_URL:latest,ENCRYPTION_SECRET_KEY=ENCRYPTION_SECRET_KEY:latest,R2_ACCESS_KEY_ID=R2_ACCESS_KEY_ID:latest,R2_SECRET_ACCESS_KEY=R2_SECRET_ACCESS_KEY:latest
+            --set-env-vars "DB_HOST=${NEON_HOST},DB_PORT=5432,DB_USER=${NEON_USER},R2_ENDPOINT=${R2_ENDPOINT},R2_BUCKET_NAME=robomatic-evidence,SCHEDULER_API_URL=${SCHEDULER_URL},TEST_EXECUTOR_API_URL=${TEST_EXECUTOR_URL},FILE_MANAGER_API_URL=${FILE_MANAGER_URL},EMAIL_API_URL=${EMAIL_URL},CORS_ALLOWED_ORIGINS=http://localhost:4200,http://robomatic.cloud,https://robomatic.cloud,https://robomatic-fe.vercel.app" \
+            --set-secrets "DB_PWD=NEON_DB_PASSWORD:latest,CLOUDAMQP_URL=CLOUDAMQP_URL:latest,ENCRYPTION_SECRET_KEY=ENCRYPTION_SECRET_KEY:latest,R2_ACCESS_KEY_ID=R2_ACCESS_KEY_ID:latest,R2_SECRET_ACCESS_KEY=R2_SECRET_ACCESS_KEY:latest"
+
 
 
