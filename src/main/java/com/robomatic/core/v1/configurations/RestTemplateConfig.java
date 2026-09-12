@@ -8,9 +8,16 @@ import org.springframework.web.client.RestTemplate;
 @Component
 public class RestTemplateConfig {
 
-	@Bean
-  public RestTemplate restTemplate(RestTemplateBuilder builder) {
-    // Do any additional configuration here
-    return builder.build();
-  }
+    private final GcpAuthInterceptor gcpAuthInterceptor;
+
+    public RestTemplateConfig(GcpAuthInterceptor gcpAuthInterceptor) {
+        this.gcpAuthInterceptor = gcpAuthInterceptor;
+    }
+
+    @Bean
+    public RestTemplate restTemplate(RestTemplateBuilder builder) {
+        return builder
+                .additionalInterceptors(gcpAuthInterceptor)
+                .build();
+    }
 }
