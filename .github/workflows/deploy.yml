@@ -54,14 +54,12 @@ jobs:
           NEON_USER=$(echo "$RAW_NEON_USER" | tr -d '[:space:]')
           [ -z "$NEON_USER" ] && NEON_USER="neondb_owner"
           R2_ENDPOINT=$(echo "$RAW_R2_ENDPOINT" | tr -d '[:space:]')
-          TEST_EXECUTOR_URL=$(echo "$RAW_TEST_EXECUTOR_URL" | tr -d '[:space:]')
-          EXECUTOR_BASE_HOST="${TEST_EXECUTOR_URL%/test-executor/v1}"
-          SCHEDULER_URL=$(echo "$RAW_SCHEDULER_URL" | tr -d '[:space:]')
-          [ -z "$SCHEDULER_URL" ] && [ -n "$EXECUTOR_BASE_HOST" ] && SCHEDULER_URL="${EXECUTOR_BASE_HOST}/scheduler/v1"
-          FILE_MANAGER_URL=$(echo "$RAW_FILE_MANAGER_URL" | tr -d '[:space:]')
-          [ -z "$FILE_MANAGER_URL" ] && [ -n "$EXECUTOR_BASE_HOST" ] && FILE_MANAGER_URL="${EXECUTOR_BASE_HOST}/file-manager-api/v1"
-          EMAIL_URL=$(echo "$RAW_EMAIL_URL" | tr -d '[:space:]')
-          [ -z "$EMAIL_URL" ] && [ -n "$EXECUTOR_BASE_HOST" ] && EMAIL_URL="${EXECUTOR_BASE_HOST}/email-api/v1"
+          [ -z "$R2_ENDPOINT" ] && R2_ENDPOINT="https://61ae37ef07d5d8dcf4df0498e3f0ec19.r2.cloudflarestorage.com"
+          EXECUTOR_BASE_HOST="https://robomatic-test-executor-api-80770840815.southamerica-west1.run.app"
+          TEST_EXECUTOR_URL="${EXECUTOR_BASE_HOST}/test-executor/v1"
+          SCHEDULER_URL="${EXECUTOR_BASE_HOST}/scheduler/v1"
+          FILE_MANAGER_URL="${EXECUTOR_BASE_HOST}/file-manager-api/v1"
+          EMAIL_URL="${EXECUTOR_BASE_HOST}/email-api/v1"
 
           echo "DB_HOST: \"${NEON_HOST}\"" > env.yaml
           echo "DB_PORT: \"5432\"" >> env.yaml
