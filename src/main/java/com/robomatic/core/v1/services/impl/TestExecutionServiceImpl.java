@@ -40,23 +40,7 @@ public class TestExecutionServiceImpl implements TestExecutionService {
     public List<TestExecutionRecordModel> getTestExecutionList(Integer testId) {
         log.info("Getting list of executions for test: {}", testId);
         try {
-            List<TestExecutionRecordModel> ret = new ArrayList<>();
-            List<TestExecutionEntity> testExecutionEntities = testExecutionRepository.findByTestId(testId);
-            testExecutionEntities.forEach(t -> {
-                ActionRelationalEntity actionEntity = actionRepository.findExecutionActionByTestExecution(t.getId())
-                        .orElseThrow(() -> new NotFoundException(NotFoundErrorCode.E404003));
-                ret.add(TestExecutionRecordModel.builder()
-                        .id(t.getId())
-                        .testExecutionId(t.getTestExecutionId())
-                        .testId(t.getTestId())
-                        .testResultDir(t.getTestResultsDir())
-                        .status(t.getStatus())
-                        .date(actionEntity.getDate())
-                        .user(actionEntity.getUserFrom().getFullName())
-                        .build());
-            });
-            ret.sort(Comparator.comparing(TestExecutionRecordModel::getDate, Comparator.reverseOrder()));
-            return ret;
+            return testExecutionRepository.findExecutionRecordsByTestId(testId);
         } catch (Exception e) {
             log.error("Exception getting list of executions - {}", e.getMessage());
             throw e;

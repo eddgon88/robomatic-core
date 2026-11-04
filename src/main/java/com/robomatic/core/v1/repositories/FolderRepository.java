@@ -12,4 +12,6 @@ public interface FolderRepository extends JpaRepository<FolderEntity, Integer> {
     @Query(value = "SELECT f FROM FolderEntity f WHERE f.id in (:ids)")
     List<FolderEntity> getFolderList(@Param("ids") String ids);
 
+    List<FolderEntity> findByFolderId(Integer folderId);
+
 }

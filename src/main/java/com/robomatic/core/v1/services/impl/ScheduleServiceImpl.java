@@ -70,11 +70,45 @@ public class ScheduleServiceImpl implements ScheduleService {
     @Override
     public ScheduleListModel getAllSchedules() {
         List<ScheduleEntity> entities = scheduleRepository.findAllActive();
-        
-        // Filtrar solo los schedules donde el usuario tiene permisos de owner, editor o ejecutor
-        List<ScheduleModel> schedules = entities.stream()
-                .filter(entity -> hasSchedulablePermissionOnTest(entity.getTestId()))
-                .map(this::mapToModel)
+        if (entities.isEmpty()) {
+            return ScheduleListModel.builder()
+                    .schedules(java.util.Collections.emptyList())
+                    .total(0)
+                    .build();
+        }
+
+        Integer userId = currentUser.getId();
+        Integer roleId = currentUser.getRoleId();
+        boolean hasGlobalAccess = currentUser.isSuperAdmin()
+                || (roleId != null && (roleId.equals(RoleEnum.ADMIN.getCode()) || roleId.equals(RoleEnum.ANALYST.getCode())));
+
+        java.util.Set<Integer> allowedTestIds;
+        if (hasGlobalAccess) {
+            allowedTestIds = null;
+        } else {
+            allowedTestIds = actionRelationalRepository.findTestsWithSchedulablePermission(userId).stream()
+                    .map(ActionRelationalEntity::getTest)
+                    .filter(java.util.Objects::nonNull)
+                    .map(TestEntity::getId)
+                    .collect(Collectors.toSet());
+        }
+
+        List<ScheduleEntity> filteredEntities = entities.stream()
+                .filter(entity -> hasGlobalAccess || (allowedTestIds != null && allowedTestIds.contains(entity.getTestId())))
+                .collect(Collectors.toList());
+
+        java.util.Set<Integer> testIds = filteredEntities.stream()
+                .map(ScheduleEntity::getTestId)
+                .filter(java.util.Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        Map<Integer, String> testNamesById = testIds.isEmpty()
+                ? java.util.Collections.emptyMap()
+                : testRepository.findAllById(testIds).stream()
+                        .collect(Collectors.toMap(TestEntity::getId, TestEntity::getName));
+
+        List<ScheduleModel> schedules = filteredEntities.stream()
+                .map(entity -> mapToModelWithTestName(entity, testNamesById.getOrDefault(entity.getTestId(), "Unknown")))
                 .collect(Collectors.toList());
 
         return ScheduleListModel.builder()
@@ -356,7 +390,10 @@ public class ScheduleServiceImpl implements ScheduleService {
     private ScheduleModel mapToModel(ScheduleEntity entity) {
         TestEntity test = testRepository.findById(entity.getTestId()).orElse(null);
         String testName = test != null ? test.getName() : "Unknown";
+        return mapToModelWithTestName(entity, testName);
+    }
 
+    private ScheduleModel mapToModelWithTestName(ScheduleEntity entity, String testName) {
         ScheduleStatusEnum status = ScheduleStatusEnum.getByCode(entity.getStatus());
 
         return ScheduleModel.builder()

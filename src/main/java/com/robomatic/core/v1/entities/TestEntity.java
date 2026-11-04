@@ -6,12 +6,14 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.BatchSize;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
+@BatchSize(size = 50)
 @Table(name = "test", schema = "core")
 public class TestEntity {
 
@@ -41,6 +43,7 @@ public class TestEntity {
 
     private String description;
 
+    @BatchSize(size = 50)
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
         name = "test_ai_agent",

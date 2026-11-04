@@ -19,5 +19,6 @@ public interface TestRepository extends JpaRepository<TestEntity, Integer> {
     @Query(value = "SELECT t FROM TestEntity t WHERE t.id in (:ids)")
     List<TestEntity> getTestList(@Param("ids") String ids);
 
+    List<TestEntity> findByFolderId(Integer folderId);
 
 }

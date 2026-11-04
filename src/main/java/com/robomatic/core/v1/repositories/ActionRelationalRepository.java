@@ -10,23 +10,45 @@ import java.util.Optional;
 
 public interface ActionRelationalRepository extends JpaRepository<ActionRelationalEntity, Integer> {
 
-    @Query(value = "SELECT a FROM ActionRelationalEntity a WHERE (a.actionId = 1 AND a.userFrom.id = :user) OR (a.actionId in (5, 6, 7) AND a.userTo.id = :user)")
+    @Query(value = "SELECT DISTINCT a FROM ActionRelationalEntity a " +
+            "LEFT JOIN FETCH a.userFrom " +
+            "LEFT JOIN FETCH a.userTo " +
+            "LEFT JOIN FETCH a.test " +
+            "LEFT JOIN FETCH a.folder " +
+            "WHERE (a.actionId = 1 AND a.userFrom.id = :user) OR (a.actionId in (5, 6, 7) AND a.userTo.id = :user)")
     List<ActionRelationalEntity> findActionsByUser(@Param("user") Integer user);
 
-    @Query(value = "SELECT a FROM ActionRelationalEntity a WHERE a.actionId = 4 AND a.testExecution.id = :testExecution")
+    @Query(value = "SELECT DISTINCT a FROM ActionRelationalEntity a " +
+            "LEFT JOIN FETCH a.userFrom " +
+            "LEFT JOIN FETCH a.userTo " +
+            "LEFT JOIN FETCH a.test t " +
+            "LEFT JOIN FETCH a.folder f " +
+            "WHERE ((a.actionId = 1 AND a.userFrom.id = :user) OR (a.actionId in (5, 6, 7) AND a.userTo.id = :user)) " +
+            "AND ((t IS NOT NULL AND t.folderId = :folderId) OR (f IS NOT NULL AND f.folderId = :folderId))")
+    List<ActionRelationalEntity> findActionsByUserAndFolder(@Param("user") Integer user, @Param("folderId") Integer folderId);
+
+    @Query(value = "SELECT a FROM ActionRelationalEntity a LEFT JOIN FETCH a.userFrom WHERE a.actionId = 4 AND a.testExecution.id = :testExecution")
     Optional<ActionRelationalEntity> findExecutionActionByTestExecution(@Param("testExecution") Integer testExecution);
 
     /**
      * Encuentra tests donde el usuario es owner (actionId = 1) o tiene permiso de edición (actionId = 7)
      */
-    @Query(value = "SELECT DISTINCT a FROM ActionRelationalEntity a WHERE a.test IS NOT NULL AND " +
+    @Query(value = "SELECT DISTINCT a FROM ActionRelationalEntity a " +
+            "LEFT JOIN FETCH a.userFrom " +
+            "LEFT JOIN FETCH a.userTo " +
+            "LEFT JOIN FETCH a.test " +
+            "WHERE a.test IS NOT NULL AND " +
             "((a.actionId = 1 AND a.userFrom.id = :userId) OR (a.actionId = 7 AND a.userTo.id = :userId))")
     List<ActionRelationalEntity> findTestsWithOwnerOrEditPermission(@Param("userId") Integer userId);
 
     /**
      * Encuentra tests donde el usuario tiene permisos de owner (1), editor (7) o ejecutor (5)
      */
-    @Query(value = "SELECT DISTINCT a FROM ActionRelationalEntity a WHERE a.test IS NOT NULL AND " +
+    @Query(value = "SELECT DISTINCT a FROM ActionRelationalEntity a " +
+            "LEFT JOIN FETCH a.userFrom " +
+            "LEFT JOIN FETCH a.userTo " +
+            "LEFT JOIN FETCH a.test " +
+            "WHERE a.test IS NOT NULL AND " +
             "((a.actionId = 1 AND a.userFrom.id = :userId) OR (a.actionId IN (7, 5) AND a.userTo.id = :userId))")
     List<ActionRelationalEntity> findTestsWithSchedulablePermission(@Param("userId") Integer userId);
 

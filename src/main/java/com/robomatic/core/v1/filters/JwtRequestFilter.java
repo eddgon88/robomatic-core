@@ -61,9 +61,15 @@ public class JwtRequestFilter extends OncePerRequestFilter {
         }
 
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            UserDetails userDetails = this.userDetailsService.loadUserByUsername(username);
+            UserEntity userEntity = userRepository.findByEmail(username)
+                    .orElseThrow(() -> new NotFoundException(E404008));
+            UserDetails userDetails = new org.springframework.security.core.userdetails.User(
+                    userEntity.getEmail(),
+                    "$2a$10$Bk16tW8XzkR8FzEc4FY6We.DJhBRyHlBccJv.s04FgBL.hJmL8qXG",
+                    new java.util.ArrayList<>()
+            );
             if (jwtUtil.validateToken(jwt, userDetails)) {
-                getUser(username);
+                populateUser(userEntity);
                 UsernamePasswordAuthenticationToken usernamePasswordAuthenticationToken = new UsernamePasswordAuthenticationToken(
                         userDetails, null, userDetails.getAuthorities());
                 usernamePasswordAuthenticationToken
@@ -74,10 +80,7 @@ public class JwtRequestFilter extends OncePerRequestFilter {
         chain.doFilter(request, response);
     }
 
-    private void getUser(String mail) {
-        UserEntity userEntity = userRepository.findByEmail(mail)
-                .orElseThrow(() -> new NotFoundException(E404008));
-
+    private void populateUser(UserEntity userEntity) {
         user.setEmail(userEntity.getEmail());
         user.setFullName(userEntity.getFullName());
         user.setId(userEntity.getId());

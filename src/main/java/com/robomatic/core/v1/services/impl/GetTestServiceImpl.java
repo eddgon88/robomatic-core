@@ -1,5 +1,6 @@
 package com.robomatic.core.v1.services.impl;
 
+import com.robomatic.core.v1.entities.ActionEntity;
 import com.robomatic.core.v1.entities.ActionRelationalEntity;
 import com.robomatic.core.v1.entities.FolderEntity;
 import com.robomatic.core.v1.entities.TestCaseEntity;
@@ -33,7 +34,11 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Base64;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -88,11 +93,11 @@ public class GetTestServiceImpl implements GetTestService {
         List<ActionRelationalEntity> actions;
 
         if (user.isSuperAdmin()) {
-            tests = testRepository.findAll();
-            folders = folderRepository.findAll();
+            tests = testRepository.findByFolderId(folderId);
+            folders = folderRepository.findByFolderId(folderId);
             actions = new java.util.ArrayList<>(); // Empty for super admin, fillRecords will handle it
         } else {
-            actions = actionRelationalRepository.findActionsByUser(user.getId());
+            actions = actionRelationalRepository.findActionsByUserAndFolder(user.getId(), folderId);
             tests = new java.util.ArrayList<>();
             folders = new java.util.ArrayList<>();
 
@@ -101,9 +106,9 @@ public class GetTestServiceImpl implements GetTestService {
                     tests.add(a.getTest());
                 } else if (a.getUserFrom().getId().equals(user.getId()) && a.getTest() == null && a.getFolder() != null) {
                     folders.add(a.getFolder());
-                } else if (a.getUserTo().getId().equals(user.getId()) && a.getTest() != null && a.getFolder() == null) {
+                } else if (a.getUserTo() != null && a.getUserTo().getId().equals(user.getId()) && a.getTest() != null && a.getFolder() == null) {
                     tests.add(a.getTest());
-                } else if (a.getUserTo().getId().equals(user.getId()) && a.getTest() == null && a.getFolder() != null) {
+                } else if (a.getUserTo() != null && a.getUserTo().getId().equals(user.getId()) && a.getTest() == null && a.getFolder() != null) {
                     folders.add(a.getFolder());
                 }
             });
@@ -114,10 +119,21 @@ public class GetTestServiceImpl implements GetTestService {
     }
 
     private void fillRecords(List<RecordModel> records, List<TestEntity> tests, List<FolderEntity> folders, List<ActionRelationalEntity> actions, Integer folderId) {
+        List<TestEntity> folderTests = tests.stream()
+                .filter(t -> t.getFolderId().equals(folderId))
+                .collect(Collectors.toList());
 
-        tests.stream().filter(t -> t.getFolderId().equals(folderId)).forEach(t -> {
+        Set<Integer> testIds = folderTests.stream()
+                .map(TestEntity::getId)
+                .collect(Collectors.toSet());
+
+        Set<Integer> runningTestIds = testIds.isEmpty()
+                ? Collections.emptySet()
+                : testExecutionRepository.findRunningTestIds(testIds);
+
+        folderTests.forEach(t -> {
             ActionRelationalEntity action = actions.stream().filter(a -> a.getTest() != null && a.getTest().getId().equals(t.getId())).findFirst().orElse(null);
-            Boolean isRunning = checkIsRunning(t.getId());
+            Boolean isRunning = runningTestIds.contains(t.getId());
             
             String folderName = null; 
             
@@ -179,11 +195,46 @@ public class GetTestServiceImpl implements GetTestService {
     }
 
     private void getLastExecution(List<RecordModel> records) {
-        records.forEach(r -> actionRepository.findLastExecutionActionByTestId(r.getId()).ifPresent(action -> {
-            TestExecutionEntity testExecution = testExecutionRepository.findById(action.getTestExecutionId()).orElse(TestExecutionEntity.builder().build());
-            r.setLastExecution(action.getDate());
-            r.setLastExecutionState(StatusEnum.getStatusByCode(testExecution.getStatus()).getValue());
-        }));
+        if (records.isEmpty()) {
+            return;
+        }
+        List<Integer> testIds = records.stream()
+                .map(RecordModel::getId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+        if (testIds.isEmpty()) {
+            return;
+        }
+
+        List<ActionEntity> lastActions = actionRepository.findLastExecutionActionsByTestIds(testIds);
+        if (lastActions.isEmpty()) {
+            return;
+        }
+
+        Map<Integer, ActionEntity> lastActionByTestId = lastActions.stream()
+                .collect(Collectors.toMap(ActionEntity::getTestId, a -> a, (a1, a2) -> a1));
+
+        Set<Integer> executionIds = lastActions.stream()
+                .map(ActionEntity::getTestExecutionId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        Map<Integer, TestExecutionEntity> executionsById = executionIds.isEmpty()
+                ? Collections.emptyMap()
+                : testExecutionRepository.findAllById(executionIds).stream()
+                        .collect(Collectors.toMap(TestExecutionEntity::getId, e -> e));
+
+        records.forEach(r -> {
+            ActionEntity action = lastActionByTestId.get(r.getId());
+            if (action != null) {
+                TestExecutionEntity testExecution = executionsById.getOrDefault(
+                        action.getTestExecutionId(),
+                        TestExecutionEntity.builder().build()
+                );
+                r.setLastExecution(action.getDate());
+                r.setLastExecutionState(StatusEnum.getStatusByCode(testExecution.getStatus()).getValue());
+            }
+        });
     }
 
     @Override
@@ -216,31 +267,29 @@ public class GetTestServiceImpl implements GetTestService {
         }
         Integer userId = user.getId();
         
-        // Buscar la acción relacionada al usuario para este test
-        List<ActionRelationalEntity> actions = actionRelationalRepository.findActionsByUser(userId);
+        // Buscar la acción relacionada al usuario específicamente para este test
+        List<ActionEntity> actions = actionRepository.findUserActionsOnTest(userId, testId);
         
-        for (ActionRelationalEntity action : actions) {
-            if (action.getTest() != null && action.getTest().getId().equals(testId)) {
-                // Es el creador (owner)
-                if (action.getActionId().equals(ActionEnum.CREATE.getCode()) && 
-                    action.getUserFrom().getId().equals(userId)) {
-                    return PermissionsEnum.OWNER.getValue();
-                }
-                // Tiene permiso de edición
-                if (action.getActionId().equals(ActionEnum.EDIT_PERMISSION.getCode()) && 
-                    action.getUserTo() != null && action.getUserTo().getId().equals(userId)) {
-                    return PermissionsEnum.EDIT.getValue();
-                }
-                // Tiene permiso de ejecución
-                if (action.getActionId().equals(ActionEnum.EXECUTE_PERMISSION.getCode()) && 
-                    action.getUserTo() != null && action.getUserTo().getId().equals(userId)) {
-                    return PermissionsEnum.EXECUTE.getValue();
-                }
-                // Tiene permiso de visualización
-                if (action.getActionId().equals(ActionEnum.VIEW_PERMISSION.getCode()) && 
-                    action.getUserTo() != null && action.getUserTo().getId().equals(userId)) {
-                    return PermissionsEnum.VIEW.getValue();
-                }
+        for (ActionEntity action : actions) {
+            // Es el creador (owner)
+            if (action.getActionId().equals(ActionEnum.CREATE.getCode()) && 
+                userId.equals(action.getUserFrom())) {
+                return PermissionsEnum.OWNER.getValue();
+            }
+            // Tiene permiso de edición
+            if (action.getActionId().equals(ActionEnum.EDIT_PERMISSION.getCode()) && 
+                userId.equals(action.getUserTo())) {
+                return PermissionsEnum.EDIT.getValue();
+            }
+            // Tiene permiso de ejecución
+            if (action.getActionId().equals(ActionEnum.EXECUTE_PERMISSION.getCode()) && 
+                userId.equals(action.getUserTo())) {
+                return PermissionsEnum.EXECUTE.getValue();
+            }
+            // Tiene permiso de visualización
+            if (action.getActionId().equals(ActionEnum.VIEW_PERMISSION.getCode()) && 
+                userId.equals(action.getUserTo())) {
+                return PermissionsEnum.VIEW.getValue();
             }
         }
         
@@ -273,13 +322,25 @@ public class GetTestServiceImpl implements GetTestService {
     @Override
     public List<RecordModel> getTestsForScheduler() {
         if (user.isSuperAdmin()) {
-            return testRepository.findAll().stream().map(test -> {
-                Boolean isRunning = checkIsRunning(test.getId());
+            List<TestEntity> allTests = testRepository.findAll();
+            Set<Integer> testIds = allTests.stream().map(TestEntity::getId).collect(Collectors.toSet());
+            Set<Integer> runningTestIds = testIds.isEmpty()
+                    ? Collections.emptySet()
+                    : testExecutionRepository.findRunningTestIds(testIds);
+            Set<Integer> folderIds = allTests.stream()
+                    .map(TestEntity::getFolderId)
+                    .filter(fid -> fid != null && fid != 0)
+                    .collect(Collectors.toSet());
+            Map<Integer, String> folderNames = folderIds.isEmpty()
+                    ? Collections.emptyMap()
+                    : folderRepository.findAllById(folderIds).stream()
+                            .collect(Collectors.toMap(FolderEntity::getId, FolderEntity::getName));
+
+            return allTests.stream().map(test -> {
+                Boolean isRunning = runningTestIds.contains(test.getId());
                 String folderName = "Root";
                 if (test.getFolderId() != null && test.getFolderId() != 0) {
-                    folderName = folderRepository.findById(test.getFolderId())
-                            .map(FolderEntity::getName)
-                            .orElse("Unknown");
+                    folderName = folderNames.getOrDefault(test.getFolderId(), "Unknown");
                 }
                 return testMapper.testAndActionToRecord(test, null, PermissionsEnum.OWNER.getValue(), isRunning, folderName);
             }).collect(Collectors.toList());
@@ -289,6 +350,25 @@ public class GetTestServiceImpl implements GetTestService {
         
         // Obtener acciones donde el usuario es owner o tiene permiso de edición o ejecución
         List<ActionRelationalEntity> actions = actionRelationalRepository.findTestsWithSchedulablePermission(user.getId());
+
+        Set<Integer> testIds = actions.stream()
+                .map(ActionRelationalEntity::getTest)
+                .filter(Objects::nonNull)
+                .map(TestEntity::getId)
+                .collect(Collectors.toSet());
+        Set<Integer> runningTestIds = testIds.isEmpty()
+                ? Collections.emptySet()
+                : testExecutionRepository.findRunningTestIds(testIds);
+        Set<Integer> folderIds = actions.stream()
+                .map(ActionRelationalEntity::getTest)
+                .filter(Objects::nonNull)
+                .map(TestEntity::getFolderId)
+                .filter(fid -> fid != null && fid != 0)
+                .collect(Collectors.toSet());
+        Map<Integer, String> folderNames = folderIds.isEmpty()
+                ? Collections.emptyMap()
+                : folderRepository.findAllById(folderIds).stream()
+                        .collect(Collectors.toMap(FolderEntity::getId, FolderEntity::getName));
         
         // Usar un Set para evitar duplicados (un usuario podría tener múltiples permisos sobre el mismo test)
         java.util.Set<Integer> processedTestIds = new java.util.HashSet<>();
@@ -307,13 +387,11 @@ public class GetTestServiceImpl implements GetTestService {
                     permission = PermissionsEnum.EXECUTE.getValue();
                 }
                 
-                Boolean isRunning = checkIsRunning(test.getId());
+                Boolean isRunning = runningTestIds.contains(test.getId());
                 
                 String folderName = "Root";
                 if (test.getFolderId() != null && test.getFolderId() != 0) {
-                    folderName = folderRepository.findById(test.getFolderId())
-                            .map(FolderEntity::getName)
-                            .orElse("Unknown");
+                    folderName = folderNames.getOrDefault(test.getFolderId(), "Unknown");
                 }
                 
                 records.add(testMapper.testAndActionToRecord(test, action, permission, isRunning, folderName));
